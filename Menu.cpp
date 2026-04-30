@@ -7,7 +7,7 @@ using namespace std;
 
 // 构造函数
 Menu::Menu() {
-    manager = new ScoreManager();
+    manager = make_unique<ScoreManager>();
     dataFile = "students.dat";
     loadData();
 }
@@ -15,7 +15,6 @@ Menu::Menu() {
 // 析构函数
 Menu::~Menu() {
     saveData();
-    delete manager;
 }
 
 // 加载数据
@@ -194,10 +193,10 @@ void Menu::showSortMenu() {
 void Menu::handleSortMenuChoice(int choice) {
     switch (choice) {
         case 1:
-            sortByTotalUI();
+            sortByTotalDirect(SORT_BY_TOTAL_DESC);
             break;
         case 2:
-            sortByTotalUI();
+            sortByTotalDirect(SORT_BY_TOTAL_ASC);
             break;
         case 3:
             sortByAverageUI();
@@ -668,6 +667,33 @@ void Menu::sortByTotalUI() {
     }
     
     cout << "按总分排序结果：" << endl;
+    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    cout << "| 排名 |   学号     |  姓名  |  班级   |  总分   | 平均分 |" << endl;
+    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    
+    for (size_t i = 0; i < sortedStudents.size(); i++) {
+        cout << "| " << setw(4) << (i + 1) << " |";
+        cout << " " << setw(10) << sortedStudents[i].getStudentId() << " |";
+        cout << " " << setw(6) << sortedStudents[i].getName() << " |";
+        cout << " " << setw(7) << sortedStudents[i].getClassName() << " |";
+        cout << " " << fixed << setprecision(1) << setw(7) << sortedStudents[i].getTotalScore() << " |";
+        cout << " " << fixed << setprecision(1) << setw(5) << sortedStudents[i].getAverageScore() << " |" << endl;
+    }
+    
+    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+}
+
+// 按总分排序（直接指定排序方式，不再让用户选择）
+void Menu::sortByTotalDirect(SortType sortType) {
+    vector<Student> sortedStudents = manager->sortStudents(sortType);
+    
+    if (sortedStudents.empty()) {
+        cout << "暂无学生信息。" << endl;
+        return;
+    }
+    
+    string orderText = (sortType == SORT_BY_TOTAL_DESC) ? "降序" : "升序";
+    cout << "按总分" << orderText << "排序结果：" << endl;
     cout << "+------+------------+--------+---------+---------+-------+" << endl;
     cout << "| 排名 |   学号     |  姓名  |  班级   |  总分   | 平均分 |" << endl;
     cout << "+------+------------+--------+---------+---------+-------+" << endl;
