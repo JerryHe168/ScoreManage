@@ -271,53 +271,78 @@ bool ScoreManager::loadFromFile(const string& filename) {
         return false;
     }
     
-    students.clear();
+    // 使用临时变量存储读取的数据，只有读取成功后才替换现有数据
+    vector<string> tempSubjects;
+    vector<Student> tempStudents;
     
     // 读取科目列表
     int subjectCount;
-    file >> subjectCount;
+    if (!(file >> subjectCount)) {
+        file.close();
+        return false;
+    }
     file.ignore();  // 忽略换行符
     
-    subjects.clear();
     for (int i = 0; i < subjectCount; i++) {
         string subject;
-        getline(file, subject);
-        subjects.push_back(subject);
+        if (!getline(file, subject)) {
+            file.close();
+            return false;
+        }
+        tempSubjects.push_back(subject);
     }
     
     // 读取学生数量
     int studentCount;
-    file >> studentCount;
+    if (!(file >> studentCount)) {
+        file.close();
+        return false;
+    }
     file.ignore();
     
     // 读取每个学生的信息和成绩
     for (int i = 0; i < studentCount; i++) {
         string studentId, name, className;
-        getline(file, studentId);
-        getline(file, name);
-        getline(file, className);
+        if (!getline(file, studentId) || !getline(file, name) || !getline(file, className)) {
+            file.close();
+            return false;
+        }
         
         Student student(studentId, name, className);
         
         // 读取成绩
         int scoreCount;
-        file >> scoreCount;
+        if (!(file >> scoreCount)) {
+            file.close();
+            return false;
+        }
         file.ignore();
         
         for (int j = 0; j < scoreCount; j++) {
             string line;
-            getline(file, line);
+            if (!getline(file, line)) {
+                file.close();
+                return false;
+            }
             istringstream iss(line);
             string subject;
             double score;
-            iss >> subject >> score;
+            if (!(iss >> subject >> score)) {
+                file.close();
+                return false;
+            }
             student.setScore(subject, score);
         }
         
-        students.push_back(student);
+        tempStudents.push_back(student);
     }
     
     file.close();
+    
+    // 只有读取完全成功后，才替换现有数据
+    students.swap(tempStudents);
+    subjects.swap(tempSubjects);
+    
     return true;
 }
 

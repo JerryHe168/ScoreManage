@@ -3,12 +3,13 @@
 
 #include "ScoreManager.h"
 #include <string>
+#include <memory>
 
 using namespace std;
 
 class Menu {
 private:
-    ScoreManager* manager;
+    unique_ptr<ScoreManager> manager;
     string dataFile;  // 数据文件路径
 
 public:
@@ -49,6 +50,7 @@ public:
     void subjectSettingsUI();
 
     void sortByTotalUI();
+    void sortByTotalDirect(SortType sortType);
     void sortByAverageUI();
     void sortBySubjectUI();
     void sortByStudentIdUI();
