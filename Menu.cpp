@@ -7,7 +7,7 @@ using namespace std;
 
 // 构造函数
 Menu::Menu() {
-    manager = make_unique<ScoreManager>();
+    manager = unique_ptr<ScoreManager>(new ScoreManager());
     dataFile = "students.dat";
     loadData();
 }
