@@ -448,13 +448,11 @@ ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& cla
             if (totalScore > stats.totalMaxScore) {
                 stats.totalMaxScore = totalScore;
                 stats.totalMaxStudentId = student.getStudentId();
-                stats.totalMaxStudentName = student.getName();
             }
             
             if (totalScore < stats.totalMinScore) {
                 stats.totalMinScore = totalScore;
                 stats.totalMinStudentId = student.getStudentId();
-                stats.totalMinStudentName = student.getName();
             }
         }
     }
@@ -487,13 +485,11 @@ ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& cla
             if (score > subjectStats.maxScore) {
                 subjectStats.maxScore = score;
                 subjectStats.maxStudentId = student.getStudentId();
-                subjectStats.maxStudentName = student.getName();
             }
             
             if (score < subjectStats.minScore) {
                 subjectStats.minScore = score;
                 subjectStats.minStudentId = student.getStudentId();
-                subjectStats.minStudentName = student.getName();
             }
             
             if (score >= 60) {

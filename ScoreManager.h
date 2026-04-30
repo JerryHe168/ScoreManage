@@ -73,15 +73,15 @@ public:
     int getExcellentCount(const string& subject) const;
     
     // 班级统计报告结构
+    // 设计原则：只存储学生ID（主键），姓名通过ID实时查询
+    // 优点：无数据冗余、保证数据一致性、节省内存
     struct SubjectStats {
         string subject;
         double average;
         double maxScore;
-        string maxStudentId;
-        string maxStudentName;
+        string maxStudentId;      // 只存ID，显示时通过ID查姓名
         double minScore;
-        string minStudentId;
-        string minStudentName;
+        string minStudentId;      // 只存ID，显示时通过ID查姓名
         int passCount;
         int excellentCount;
         double passRate;
@@ -93,11 +93,9 @@ public:
         int totalStudents;
         vector<SubjectStats> subjectStats;
         double totalMaxScore;
-        string totalMaxStudentId;
-        string totalMaxStudentName;
+        string totalMaxStudentId;   // 只存ID
         double totalMinScore;
-        string totalMinStudentId;
-        string totalMinStudentName;
+        string totalMinStudentId;   // 只存ID
         double overallAverage;
     };
     
