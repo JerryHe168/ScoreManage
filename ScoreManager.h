@@ -71,6 +71,67 @@ public:
     double getSubjectAverage(const string& subject) const;
     int getPassCount(const string& subject) const;
     int getExcellentCount(const string& subject) const;
+    
+    // 班级统计报告结构
+    struct SubjectStats {
+        string subject;
+        double average;
+        double maxScore;
+        string maxStudentId;
+        string maxStudentName;
+        double minScore;
+        string minStudentId;
+        string minStudentName;
+        int passCount;
+        int excellentCount;
+        double passRate;
+        double excellentRate;
+    };
+    
+    struct ClassStatistics {
+        string className;
+        int totalStudents;
+        vector<SubjectStats> subjectStats;
+        double totalMaxScore;
+        string totalMaxStudentId;
+        string totalMaxStudentName;
+        double totalMinScore;
+        string totalMinStudentId;
+        string totalMinStudentName;
+        double overallAverage;
+    };
+    
+    // 分数段统计结构
+    struct ScoreRangeStats {
+        string range;
+        int count;
+        double percentage;
+    };
+    
+    // 班级统计
+    ClassStatistics getClassStatistics(const string& className) const;
+    
+    // 分数段统计
+    vector<ScoreRangeStats> getScoreRangeStats(const string& subject = "") const;
+    
+    // 所有班级列表
+    vector<string> getAllClasses() const;
+    
+    // 多格式数据持久化
+    bool saveToBinaryFile(const string& filename) const;
+    bool loadFromBinaryFile(const string& filename);
+    
+    bool saveToTextFile(const string& filename) const;
+    bool loadFromTextFile(const string& filename);
+    
+    bool saveToCSVFile(const string& filename) const;
+    bool loadFromCSVFile(const string& filename);
+    
+    bool saveToJSONFile(const string& filename) const;
+    bool loadFromJSONFile(const string& filename);
+    
+    bool saveToXMLFile(const string& filename) const;
+    bool loadFromXMLFile(const string& filename);
 };
 
 #endif // SCOREMANAGER_H

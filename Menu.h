@@ -37,6 +37,14 @@ public:
     void showQueryMenu();
     void handleQueryMenuChoice(int choice);
 
+    // 统计分析子菜单
+    void showStatisticsMenu();
+    void handleStatisticsMenuChoice(int choice);
+
+    // 数据管理子菜单
+    void showDataMenu();
+    void handleDataMenuChoice(int choice);
+
     // 辅助功能
     void addStudentUI();
     void deleteStudentUI();
@@ -59,6 +67,17 @@ public:
     void queryByScoreRangeUI();
     void queryByNameUI();
     void queryByMinScoreUI();
+
+    // 统计分析功能
+    void personalStatisticsUI();
+    void classStatisticsUI();
+    void scoreRangeStatisticsUI();
+
+    // 数据管理功能
+    void exportDataUI();
+    void importDataUI();
+    void selectExportFormat(int& format);
+    void selectImportFormat(int& format);
 
     void displayStudentReport(const Student& student);
 

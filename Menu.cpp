@@ -38,15 +38,17 @@ void Menu::saveData() {
 // 显示主菜单
 void Menu::showMainMenu() {
     cout << endl;
-    cout << "╔═════════════════════════════════╗" << endl;
-    cout << "║     学生成绩管理系统 v1.0        ║" << endl;
-    cout << "╠═════════════════════════════════╣" << endl;
-    cout << "║  1. 信息管理                     ║" << endl;
-    cout << "║  2. 成绩管理                     ║" << endl;
-    cout << "║  3. 成绩排序                     ║" << endl;
-    cout << "║  4. 综合查询                     ║" << endl;
-    cout << "║  0. 退出系统                     ║" << endl;
-    cout << "╚═════════════════════════════════╝" << endl;
+    cout << "╔══════════════════════════════════╗" << endl;
+    cout << "║     学生成绩管理系统 v2.0         ║" << endl;
+    cout << "╠══════════════════════════════════╣" << endl;
+    cout << "║  1. 信息管理                      ║" << endl;
+    cout << "║  2. 成绩管理                      ║" << endl;
+    cout << "║  3. 统计分析                      ║" << endl;
+    cout << "║  4. 成绩排序                      ║" << endl;
+    cout << "║  5. 综合查询                      ║" << endl;
+    cout << "║  6. 数据管理                      ║" << endl;
+    cout << "║  0. 退出系统                      ║" << endl;
+    cout << "╚══════════════════════════════════╝" << endl;
     cout << "请选择功能：";
 }
 
@@ -60,10 +62,16 @@ void Menu::handleMainMenuChoice(int choice) {
             showScoreMenu();
             break;
         case 3:
-            showSortMenu();
+            showStatisticsMenu();
             break;
         case 4:
+            showSortMenu();
+            break;
+        case 5:
             showQueryMenu();
+            break;
+        case 6:
+            showDataMenu();
             break;
         case 0:
             cout << "感谢使用，再见！" << endl;
@@ -995,6 +1003,399 @@ void Menu::queryByMinScoreUI() {
     
     cout << "+------------+--------+---------+---------+-------+" << endl;
     cout << "共查询到 " << result.size() << " 名学生。" << endl;
+}
+
+// 显示统计分析菜单
+void Menu::showStatisticsMenu() {
+    int choice;
+    do {
+        cout << endl;
+        cout << "┌───────────── 统计分析 ────────────┐" << endl;
+        cout << "│ 1. 个人统计                        │" << endl;
+        cout << "│ 2. 班级统计                        │" << endl;
+        cout << "│ 3. 分数段统计                      │" << endl;
+        cout << "│ 0. 返回主菜单                      │" << endl;
+        cout << "└────────────────────────────────────┘" << endl;
+        cout << "请选择功能：";
+        cin >> choice;
+        
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        
+        handleStatisticsMenuChoice(choice);
+    } while (choice != 0);
+}
+
+// 处理统计分析菜单选择
+void Menu::handleStatisticsMenuChoice(int choice) {
+    switch (choice) {
+        case 1:
+            personalStatisticsUI();
+            break;
+        case 2:
+            classStatisticsUI();
+            break;
+        case 3:
+            scoreRangeStatisticsUI();
+            break;
+        case 0:
+            break;
+        default:
+            cout << "无效的选择，请重新输入。" << endl;
+    }
+}
+
+// 个人统计界面
+void Menu::personalStatisticsUI() {
+    string id;
+    
+    cout << "请输入要查询的学生学号：";
+    getline(cin, id);
+    
+    Student* student = manager->findStudentById(id);
+    if (student == nullptr) {
+        cout << "未找到该学生。" << endl;
+        return;
+    }
+    
+    displayStudentReport(*student);
+}
+
+// 班级统计界面
+void Menu::classStatisticsUI() {
+    vector<string> classes = manager->getAllClasses();
+    
+    if (classes.empty()) {
+        cout << "暂无班级信息。" << endl;
+        return;
+    }
+    
+    cout << "当前存在的班级：" << endl;
+    for (size_t i = 0; i < classes.size(); i++) {
+        cout << (i + 1) << ". " << classes[i] << endl;
+    }
+    
+    int choice;
+    cout << "请选择要统计的班级：";
+    cin >> choice;
+    cin.ignore();
+    
+    if (choice < 1 || choice > (int)classes.size()) {
+        cout << "无效的选择。" << endl;
+        return;
+    }
+    
+    string className = classes[choice - 1];
+    ScoreManager::ClassStatistics stats = manager->getClassStatistics(className);
+    
+    cout << endl;
+    cout << "═══════════════════════════════════════════════════════════" << endl;
+    cout << "                 班级统计报告 - " << className << endl;
+    cout << "═══════════════════════════════════════════════════════════" << endl;
+    cout << endl;
+    cout << "【班级基本信息】" << endl;
+    cout << "  班级名称：" << stats.className << endl;
+    cout << "  班级人数：" << stats.totalStudents << " 人" << endl;
+    cout << "  班级总平均分：" << fixed << setprecision(1) << stats.overallAverage << " 分" << endl;
+    cout << endl;
+    
+    if (stats.totalMaxScore >= 0) {
+        cout << "  总分最高分：" << fixed << setprecision(1) << stats.totalMaxScore 
+             << " 分 (" << stats.totalMaxStudentName << " " << stats.totalMaxStudentId << ")" << endl;
+    }
+    if (stats.totalMinScore <= 100) {
+        cout << "  总分最低分：" << fixed << setprecision(1) << stats.totalMinScore 
+             << " 分 (" << stats.totalMinStudentName << " " << stats.totalMinStudentId << ")" << endl;
+    }
+    cout << endl;
+    
+    cout << "【各科成绩统计】" << endl;
+    cout << "─────────────────────────────────────────────────────────────" << endl;
+    cout << " 科目    平均分   最高分          最低分          及格率  优秀率" << endl;
+    cout << "─────────────────────────────────────────────────────────────" << endl;
+    
+    for (const auto& subj : stats.subjectStats) {
+        cout << " " << setw(6) << subj.subject;
+        cout << " " << fixed << setprecision(1) << setw(6) << subj.average;
+        
+        if (subj.maxScore >= 0) {
+            cout << " " << fixed << setprecision(1) << setw(6) << subj.maxScore 
+                 << "(" << subj.maxStudentName << ")";
+        } else {
+            cout << "    --.-- (无数据)";
+        }
+        
+        if (subj.minScore <= 100) {
+            cout << " " << fixed << setprecision(1) << setw(6) << subj.minScore 
+                 << "(" << subj.minStudentName << ")";
+        } else {
+            cout << "    --.-- (无数据)";
+        }
+        
+        cout << " " << fixed << setprecision(1) << setw(5) << subj.passRate << "%";
+        cout << " " << fixed << setprecision(1) << setw(5) << subj.excellentRate << "%";
+        cout << endl;
+    }
+    
+    cout << "─────────────────────────────────────────────────────────────" << endl;
+    cout << "说明：" << endl;
+    cout << "  - 及格率：成绩 ≥ 60分 的学生比例" << endl;
+    cout << "  - 优秀率：成绩 ≥ 85分 的学生比例" << endl;
+    cout << "═══════════════════════════════════════════════════════════" << endl;
+}
+
+// 分数段统计界面
+void Menu::scoreRangeStatisticsUI() {
+    vector<string> subjects = manager->getSubjects();
+    
+    cout << endl;
+    cout << "请选择统计方式：" << endl;
+    cout << "1. 按平均分统计（整体成绩分布）" << endl;
+    cout << "2. 按单科成绩统计" << endl;
+    cout << "请选择：";
+    
+    int choice;
+    cin >> choice;
+    cin.ignore();
+    
+    string selectedSubject;
+    
+    if (choice == 2) {
+        if (subjects.empty()) {
+            cout << "暂无科目信息。" << endl;
+            return;
+        }
+        
+        cout << "请选择要统计的科目：" << endl;
+        for (size_t i = 0; i < subjects.size(); i++) {
+            cout << (i + 1) << ". " << subjects[i] << endl;
+        }
+        
+        int subjChoice;
+        cout << "请选择：";
+        cin >> subjChoice;
+        cin.ignore();
+        
+        if (subjChoice < 1 || subjChoice > (int)subjects.size()) {
+            cout << "无效的选择。" << endl;
+            return;
+        }
+        
+        selectedSubject = subjects[subjChoice - 1];
+    }
+    
+    vector<ScoreManager::ScoreRangeStats> stats = manager->getScoreRangeStats(selectedSubject);
+    
+    cout << endl;
+    cout << "═══════════════════════════════════════════════════════════" << endl;
+    if (selectedSubject.empty()) {
+        cout << "                 平均分分数段分布统计" << endl;
+    } else {
+        cout << "                 " << selectedSubject << " 分数段分布统计" << endl;
+    }
+    cout << "═══════════════════════════════════════════════════════════" << endl;
+    cout << endl;
+    
+    int maxCount = 0;
+    for (const auto& s : stats) {
+        if (s.count > maxCount) maxCount = s.count;
+    }
+    
+    if (maxCount == 0) {
+        cout << "  暂无数据。" << endl;
+        cout << "═══════════════════════════════════════════════════════════" << endl;
+        return;
+    }
+    
+    // 最大显示20个字符
+    const int maxBarLength = 20;
+    
+    for (const auto& s : stats) {
+        int barLength = (s.count * maxBarLength + maxCount - 1) / maxCount;  // 向上取整
+        
+        cout << "  " << setw(8) << s.range << "分: ";
+        cout << "█";
+        for (int i = 1; i < barLength; i++) {
+            cout << "█";
+        }
+        for (int i = barLength; i < maxBarLength; i++) {
+            cout << " ";
+        }
+        cout << " (" << setw(2) << s.count << "人, " << fixed << setprecision(1) << s.percentage << "%)" << endl;
+    }
+    
+    cout << endl;
+    cout << "  分数段说明：" << endl;
+    cout << "    90-100分: 优秀 (A)" << endl;
+    cout << "    80-89分:  良好 (B)" << endl;
+    cout << "    70-79分:  中等 (C)" << endl;
+    cout << "    60-69分:  及格 (D)" << endl;
+    cout << "    0-59分:   不及格 (F)" << endl;
+    cout << "═══════════════════════════════════════════════════════════" << endl;
+}
+
+// 显示数据管理菜单
+void Menu::showDataMenu() {
+    int choice;
+    do {
+        cout << endl;
+        cout << "┌───────────── 数据管理 ────────────┐" << endl;
+        cout << "│ 1. 导出数据                        │" << endl;
+        cout << "│ 2. 导入数据                        │" << endl;
+        cout << "│ 0. 返回主菜单                      │" << endl;
+        cout << "└────────────────────────────────────┘" << endl;
+        cout << "请选择功能：";
+        cin >> choice;
+        
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        
+        handleDataMenuChoice(choice);
+    } while (choice != 0);
+}
+
+// 处理数据管理菜单选择
+void Menu::handleDataMenuChoice(int choice) {
+    switch (choice) {
+        case 1:
+            exportDataUI();
+            break;
+        case 2:
+            importDataUI();
+            break;
+        case 0:
+            break;
+        default:
+            cout << "无效的选择，请重新输入。" << endl;
+    }
+}
+
+// 选择导出格式
+void Menu::selectExportFormat(int& format) {
+    cout << endl;
+    cout << "请选择导出格式：" << endl;
+    cout << "1. 二进制格式 (.dat) - 推荐，完整保存所有数据" << endl;
+    cout << "2. 文本格式 (.txt) - 易读，适合查看" << endl;
+    cout << "3. CSV格式 (.csv) - 可使用Excel打开" << endl;
+    cout << "4. JSON格式 (.json) - 结构化数据" << endl;
+    cout << "5. XML格式 (.xml) - 结构化数据" << endl;
+    cout << "请选择：";
+    cin >> format;
+    cin.ignore();
+}
+
+// 选择导入格式
+void Menu::selectImportFormat(int& format) {
+    cout << endl;
+    cout << "请选择导入格式：" << endl;
+    cout << "1. 二进制格式 (.dat) - 完整恢复所有数据" << endl;
+    cout << "2. CSV格式 (.csv) - 从Excel等软件导入" << endl;
+    cout << "请选择：";
+    cin >> format;
+    cin.ignore();
+}
+
+// 导出数据界面
+void Menu::exportDataUI() {
+    int format;
+    selectExportFormat(format);
+    
+    if (format < 1 || format > 5) {
+        cout << "无效的格式选择。" << endl;
+        return;
+    }
+    
+    string filename;
+    cout << "请输入导出文件名（不含扩展名）：";
+    getline(cin, filename);
+    
+    if (filename.empty()) {
+        cout << "文件名不能为空。" << endl;
+        return;
+    }
+    
+    bool success = false;
+    string fullFilename;
+    
+    switch (format) {
+        case 1:
+            fullFilename = filename + ".dat";
+            success = manager->saveToBinaryFile(fullFilename);
+            break;
+        case 2:
+            fullFilename = filename + ".txt";
+            success = manager->saveToTextFile(fullFilename);
+            break;
+        case 3:
+            fullFilename = filename + ".csv";
+            success = manager->saveToCSVFile(fullFilename);
+            break;
+        case 4:
+            fullFilename = filename + ".json";
+            success = manager->saveToJSONFile(fullFilename);
+            break;
+        case 5:
+            fullFilename = filename + ".xml";
+            success = manager->saveToXMLFile(fullFilename);
+            break;
+    }
+    
+    if (success) {
+        cout << "数据导出成功！文件已保存为: " << fullFilename << endl;
+    } else {
+        cout << "数据导出失败！" << endl;
+    }
+}
+
+// 导入数据界面
+void Menu::importDataUI() {
+    cout << "警告：导入数据将覆盖当前所有数据！" << endl;
+    cout << "建议先导出当前数据进行备份。" << endl;
+    
+    char confirm;
+    cout << "确定要继续导入吗？(y/n): ";
+    cin >> confirm;
+    cin.ignore();
+    
+    if (confirm != 'y' && confirm != 'Y') {
+        cout << "已取消导入。" << endl;
+        return;
+    }
+    
+    int format;
+    selectImportFormat(format);
+    
+    if (format < 1 || format > 2) {
+        cout << "无效的格式选择。" << endl;
+        return;
+    }
+    
+    string filename;
+    cout << "请输入导入文件名（含扩展名）：";
+    getline(cin, filename);
+    
+    if (filename.empty()) {
+        cout << "文件名不能为空。" << endl;
+        return;
+    }
+    
+    bool success = false;
+    
+    switch (format) {
+        case 1:
+            success = manager->loadFromBinaryFile(filename);
+            break;
+        case 2:
+            success = manager->loadFromCSVFile(filename);
+            break;
+    }
+    
+    if (success) {
+        cout << "数据导入成功！" << endl;
+        saveData();  // 保存到默认数据文件
+    } else {
+        cout << "数据导入失败！请检查文件是否存在且格式正确。" << endl;
+    }
 }
 
 // 运行系统
