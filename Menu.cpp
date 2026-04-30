@@ -1100,12 +1100,16 @@ void Menu::classStatisticsUI() {
     cout << endl;
     
     if (stats.totalMaxScore >= 0) {
+        Student* maxStudent = manager->findStudentById(stats.totalMaxStudentId);
+        string maxName = maxStudent ? maxStudent->getName() : "未知";
         cout << "  总分最高分：" << fixed << setprecision(1) << stats.totalMaxScore 
-             << " 分 (" << stats.totalMaxStudentName << " " << stats.totalMaxStudentId << ")" << endl;
+             << " 分 (" << maxName << " " << stats.totalMaxStudentId << ")" << endl;
     }
     if (stats.totalMinScore <= 100) {
+        Student* minStudent = manager->findStudentById(stats.totalMinStudentId);
+        string minName = minStudent ? minStudent->getName() : "未知";
         cout << "  总分最低分：" << fixed << setprecision(1) << stats.totalMinScore 
-             << " 分 (" << stats.totalMinStudentName << " " << stats.totalMinStudentId << ")" << endl;
+             << " 分 (" << minName << " " << stats.totalMinStudentId << ")" << endl;
     }
     cout << endl;
     
@@ -1118,16 +1122,20 @@ void Menu::classStatisticsUI() {
         cout << " " << setw(6) << subj.subject;
         cout << " " << fixed << setprecision(1) << setw(6) << subj.average;
         
-        if (subj.maxScore >= 0) {
+        if (subj.maxScore >= 0 && !subj.maxStudentId.empty()) {
+            Student* maxStudent = manager->findStudentById(subj.maxStudentId);
+            string maxName = maxStudent ? maxStudent->getName() : "未知";
             cout << " " << fixed << setprecision(1) << setw(6) << subj.maxScore 
-                 << "(" << subj.maxStudentName << ")";
+                 << "(" << maxName << ")";
         } else {
             cout << "    --.-- (无数据)";
         }
         
-        if (subj.minScore <= 100) {
+        if (subj.minScore <= 100 && !subj.minStudentId.empty()) {
+            Student* minStudent = manager->findStudentById(subj.minStudentId);
+            string minName = minStudent ? minStudent->getName() : "未知";
             cout << " " << fixed << setprecision(1) << setw(6) << subj.minScore 
-                 << "(" << subj.minStudentName << ")";
+                 << "(" << minName << ")";
         } else {
             cout << "    --.-- (无数据)";
         }
