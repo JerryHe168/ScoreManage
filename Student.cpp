@@ -11,18 +11,18 @@ Student::Student() : isComplete(false) {}
 Student::Student(const string& id, const string& n, const string& c)
     : studentId(id), name(n), className(c), isComplete(false) {}
 
-// 获取学生ID
-string Student::getStudentId() const {
+// 获取学生ID（返回const引用，避免字符串拷贝）
+const string& Student::getStudentId() const {
     return studentId;
 }
 
-// 获取学生姓名
-string Student::getName() const {
+// 获取学生姓名（返回const引用，避免字符串拷贝）
+const string& Student::getName() const {
     return name;
 }
 
-// 获取班级
-string Student::getClassName() const {
+// 获取班级（返回const引用，避免字符串拷贝）
+const string& Student::getClassName() const {
     return className;
 }
 

@@ -4,6 +4,7 @@
 #include <sstream>
 #include <iostream>
 #include <iomanip>
+#include <unordered_set>
 
 using namespace std;
 
@@ -454,21 +455,23 @@ int ScoreManager::getExcellentCount(const string& subject) const {
     return count;
 }
 
-// 获取所有班级列表
+// 获取所有班级列表（优化版本：使用set去重，O(n)复杂度）
+// 原实现：O(n²)双重循环检查重复
+// 新实现：使用unordered_set自动去重，O(n)平均复杂度
 vector<string> ScoreManager::getAllClasses() const {
-    vector<string> classes;
+    // 使用unordered_set自动去重，避免O(n²)双重循环
+    unordered_set<string> classSet;
     for (const auto& student : students) {
-        bool exists = false;
-        for (const auto& cls : classes) {
-            if (cls == student.getClassName()) {
-                exists = true;
-                break;
-            }
-        }
-        if (!exists) {
-            classes.push_back(student.getClassName());
-        }
+        classSet.insert(student.getClassName());
     }
+    
+    // 转换为vector返回
+    vector<string> classes;
+    classes.reserve(classSet.size());  // 预分配空间，避免重分配
+    for (const auto& cls : classSet) {
+        classes.push_back(cls);
+    }
+    
     return classes;
 }
 
@@ -922,11 +925,18 @@ bool ScoreManager::loadFromTextFile(const string& filename) {
 }
 
 // 保存到CSV文件
+// 修复Excel中文乱码：添加UTF-8 BOM头
+// UTF-8 BOM字节：0xEF 0xBB 0xBF
+// Excel需要BOM才能正确识别UTF-8编码的中文
 bool ScoreManager::saveToCSVFile(const string& filename) const {
-    ofstream file(filename);
+    ofstream file(filename, ios::binary);  // 二进制模式，避免BOM被转换
     if (!file.is_open()) {
         return false;
     }
+    
+    // 写入UTF-8 BOM头，解决Excel中文乱码问题
+    const unsigned char utf8BOM[] = {0xEF, 0xBB, 0xBF};
+    file.write(reinterpret_cast<const char*>(utf8BOM), sizeof(utf8BOM));
     
     // 写入表头
     file << "学号,姓名,班级";
@@ -964,10 +974,43 @@ bool ScoreManager::saveToCSVFile(const string& filename) const {
 }
 
 // 从CSV文件加载
+// 修复：处理UTF-8 BOM头（文件可能以EF BB BF开头）
 bool ScoreManager::loadFromCSVFile(const string& filename) {
-    ifstream file(filename);
+    ifstream file(filename, ios::binary);  // 二进制模式读取，正确检测BOM
     if (!file.is_open()) {
         return false;
+    }
+    
+    // 检测并跳过UTF-8 BOM
+    char bom[3];
+    if (file.read(bom, 3)) {
+        // 检查是否是UTF-8 BOM：0xEF 0xBB 0xBF
+        if (!(static_cast<unsigned char>(bom[0]) == 0xEF &&
+              static_cast<unsigned char>(bom[1]) == 0xBB &&
+              static_cast<unsigned char>(bom[2]) == 0xBF)) {
+            // 不是BOM，把读取的3个字节放回流中
+            file.seekg(0);
+        }
+    } else {
+        // 文件太短，重置到开头
+        file.seekg(0);
+    }
+    
+    // 现在用文本模式重新打开，方便getline处理
+    file.close();
+    ifstream textFile(filename);
+    if (!textFile.is_open()) {
+        return false;
+    }
+    
+    // 再次检测BOM并跳过
+    char bomCheck[3] = {0};
+    textFile.read(bomCheck, 3);
+    if (!(static_cast<unsigned char>(bomCheck[0]) == 0xEF &&
+          static_cast<unsigned char>(bomCheck[1]) == 0xBB &&
+          static_cast<unsigned char>(bomCheck[2]) == 0xBF)) {
+        // 不是BOM，重置到开头
+        textFile.seekg(0);
     }
     
     vector<string> tempSubjects;
@@ -976,8 +1019,8 @@ bool ScoreManager::loadFromCSVFile(const string& filename) {
     string line;
     
     // 读取第一行（表头）
-    if (!getline(file, line)) {
-        file.close();
+    if (!getline(textFile, line)) {
+        textFile.close();
         return false;
     }
     
@@ -997,11 +1040,12 @@ bool ScoreManager::loadFromCSVFile(const string& filename) {
     }
     
     // 读取数据行
-    while (getline(file, line)) {
+    while (getline(textFile, line)) {
         if (line.empty()) continue;
         
         vector<string> cells;
         istringstream lineStream(line);
+        string cell;
         
         while (getline(lineStream, cell, ',')) {
             cells.push_back(cell);
@@ -1031,7 +1075,7 @@ bool ScoreManager::loadFromCSVFile(const string& filename) {
         tempStudents.push_back(student);
     }
     
-    file.close();
+    textFile.close();
     
     if (tempSubjects.empty() && tempStudents.empty()) {
         return false;
@@ -1044,6 +1088,8 @@ bool ScoreManager::loadFromCSVFile(const string& filename) {
     
     students.swap(tempStudents);
     subjects.swap(tempSubjects);
+    
+    invalidateCache();  // 数据变更，使缓存失效
     
     return true;
 }

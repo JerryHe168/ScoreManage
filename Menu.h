@@ -80,6 +80,15 @@ public:
     void selectImportFormat(int& format);
 
     void displayStudentReport(const Student& student);
+    
+    // ============================ 公共显示函数（消除重复代码） ============================
+    // 显示学生列表表格（带排名）
+    void displayStudentList(const vector<Student>& students, const string& title, 
+                             bool showRank = true, bool showGrade = false);
+    
+    // 显示学生列表表格（按单科排序）
+    void displayStudentListBySubject(const vector<Student>& students, const string& subject, 
+                                       const string& title);
 
     // 数据持久化
     void loadData();
