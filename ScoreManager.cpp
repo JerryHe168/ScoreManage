@@ -13,8 +13,10 @@ using namespace std;
 // 使缓存失效 - 当学生数据变更时调用
 void ScoreManager::invalidateCache() const {
     cacheValid = false;
+    classesCacheValid = false;  // 班级列表缓存也失效
     classStatsCache.clear();
     studentIdIndex.clear();
+    classesCache.clear();  // 清空班级列表缓存
 }
 
 // 构建学生ID索引 - O(n)一次构建，后续O(1)查找
@@ -32,7 +34,7 @@ void ScoreManager::buildStudentIdIndex() const {
 
 // 构造函数
 ScoreManager::ScoreManager() 
-    : cacheValid(false) {
+    : cacheValid(false), classesCacheValid(false) {
     initDefaultSubjects();
 }
 
@@ -455,22 +457,33 @@ int ScoreManager::getExcellentCount(const string& subject) const {
     return count;
 }
 
-// 获取所有班级列表（优化版本：使用set去重，O(n)复杂度）
+// 获取所有班级列表（带缓存机制）
+// 设计模式：Lazy Cache - 首次计算，后续直接用缓存
 // 原实现：O(n²)双重循环检查重复
-// 新实现：使用unordered_set自动去重，O(n)平均复杂度
+// 新实现：unordered_set去重(O(n)) + 缓存(后续调用O(1))
 vector<string> ScoreManager::getAllClasses() const {
+    // ============================ 缓存检查 ============================
+    if (classesCacheValid) {
+        return classesCache;  // 缓存命中，O(1)返回
+    }
+    
+    // ============================ 缓存未命中，重新计算 ============================
     // 使用unordered_set自动去重，避免O(n²)双重循环
     unordered_set<string> classSet;
     for (const auto& student : students) {
         classSet.insert(student.getClassName());
     }
     
-    // 转换为vector返回
+    // 转换为vector
     vector<string> classes;
     classes.reserve(classSet.size());  // 预分配空间，避免重分配
     for (const auto& cls : classSet) {
         classes.push_back(cls);
     }
+    
+    // ============================ 存入缓存 ============================
+    classesCache = classes;
+    classesCacheValid = true;
     
     return classes;
 }

@@ -79,6 +79,10 @@ private:
     // 学生ID索引缓存： O(1)查找，替代每次O(n)遍历
     mutable unordered_map<string, size_t> studentIdIndex;  // studentId -> vector索引
     
+    // 班级列表缓存：避免每次getAllClasses都遍历所有学生
+    mutable vector<string> classesCache;
+    mutable bool classesCacheValid;  // 班级列表缓存是否有效
+    
     // 私有辅助函数
     void buildStudentIdIndex() const;  // 构建学生ID索引
     void invalidateCache() const;       // 使所有缓存失效（const方法可以调用，因为mutable）
