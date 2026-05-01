@@ -4,8 +4,45 @@
 #include "Student.h"
 #include <vector>
 #include <string>
+#include <map>
+#include <unordered_map>
 
 using namespace std;
+
+// ============================ 常量定义 ============================
+// 设计原则：所有阈值常量集中管理，避免硬编码散落在代码各处
+// 与等级评定保持一致：
+//   A: 90-100 (优秀)
+//   B: 80-89  (良好)
+//   C: 70-79  (中等)
+//   D: 60-69  (及格)
+//   F: 0-59   (不及格)
+
+const double MIN_SCORE = 0.0;
+const double MAX_SCORE = 100.0;
+
+const double PASS_SCORE = 60.0;           // 及格分数
+const double FAIR_SCORE = 70.0;           // 中等分数
+const double GOOD_SCORE = 80.0;            // 良好分数
+const double EXCELLENT_SCORE = 90.0;       // 优秀分数（与等级评定一致，A=90+）
+
+// ============================ 分数段定义 ============================
+// 可配置的分数段结构，替代硬编码
+struct ScoreRangeDef {
+    string name;
+    string displayName;
+    double minScore;
+    double maxScore;
+};
+
+// 默认分数段配置（与等级评定对应）
+const vector<ScoreRangeDef> DEFAULT_SCORE_RANGES = {
+    {"90-100", "90-100", EXCELLENT_SCORE, MAX_SCORE},
+    {"80-89", "80-89", GOOD_SCORE, EXCELLENT_SCORE - 1.0},
+    {"70-79", "70-79", FAIR_SCORE, GOOD_SCORE - 1.0},
+    {"60-69", "60-69", PASS_SCORE, FAIR_SCORE - 1.0},
+    {"0-59", "0-59", MIN_SCORE, PASS_SCORE - 1.0}
+};
 
 // 排序类型枚举
 enum SortType {
@@ -28,13 +65,30 @@ class ScoreManager {
 private:
     vector<Student> students;
     vector<string> subjects;  // 支持的科目列表
+    
+    // ============================ 缓存机制 ============================
+    // 设计模式：Lazy Cache + Invalidation
+    // 问题：每次统计都O(n)遍历，效率低下
+    // 解决方案：缓存统计结果，数据变更时清除缓存
+    
+    mutable bool cacheValid;  // 缓存是否有效（mutable允许const方法修改）
+    
+    // 班级统计缓存： className -> ClassStatistics
+    mutable unordered_map<string, ClassStatistics> classStatsCache;
+    
+    // 学生ID索引缓存： O(1)查找，替代每次O(n)遍历
+    mutable unordered_map<string, size_t> studentIdIndex;  // studentId -> vector索引
+    
+    // 私有辅助函数
+    void buildStudentIdIndex() const;  // 构建学生ID索引
+    void invalidateCache() const;       // 使所有缓存失效（const方法可以调用，因为mutable）
 
 public:
     // 构造函数
     ScoreManager();
 
     // 科目管理
-    void initDefaultSubjects();  // 初始化默认科目（语数英数理化史地生）
+    void initDefaultSubjects();
     bool addSubject(const string& subject);
     bool removeSubject(const string& subject);
     vector<string> getSubjects() const;
@@ -45,12 +99,13 @@ public:
     bool removeStudent(const string& studentId);
     bool updateStudent(const Student& student);
     Student* findStudentById(const string& studentId);
+    const Student* findStudentById(const string& studentId) const;  // const版本
     vector<Student> getAllStudents() const;
     int getStudentCount() const;
 
     // 成绩管理
     bool setStudentScore(const string& studentId, const string& subject, double score);
-    bool validateScore(double score) const;  // 验证分数是否有效（0-100）
+    bool validateScore(double score) const;
 
     // 排序功能
     vector<Student> sortStudents(SortType sortType, const string& subject = "") const;
@@ -106,10 +161,10 @@ public:
         double percentage;
     };
     
-    // 班级统计
+    // 班级统计（带缓存）
     ClassStatistics getClassStatistics(const string& className) const;
     
-    // 分数段统计
+    // 分数段统计（使用可配置的分数段）
     vector<ScoreRangeStats> getScoreRangeStats(const string& subject = "") const;
     
     // 所有班级列表
