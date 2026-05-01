@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <limits>
+#include <cctype>
 
 using namespace std;
 
@@ -33,6 +34,85 @@ void Menu::saveData() {
     } else {
         cout << "数据保存失败！" << endl;
     }
+}
+
+// ============================ 输入验证函数实现 ============================
+// 验证学号：非空、长度限制(1-20字符)、只能是数字或字母
+bool Menu::validateStudentId(const string& id, string& errorMsg) const {
+    if (id.empty()) {
+        errorMsg = "学号不能为空！";
+        return false;
+    }
+    
+    if (id.length() > 20) {
+        errorMsg = "学号长度不能超过20个字符！";
+        return false;
+    }
+    
+    // 检查每个字符是否是数字或字母
+    for (char c : id) {
+        if (!isalnum(static_cast<unsigned char>(c))) {
+            errorMsg = "学号只能包含数字和字母，不能有特殊字符！";
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// 验证姓名：非空、长度限制(1-20字符)、只能是中文或英文字母
+bool Menu::validateStudentName(const string& name, string& errorMsg) const {
+    if (name.empty()) {
+        errorMsg = "姓名不能为空！";
+        return false;
+    }
+    
+    if (name.length() > 20) {
+        errorMsg = "姓名长度不能超过20个字符！";
+        return false;
+    }
+    
+    // 检查是否有明显的非法字符（如控制字符）
+    for (char c : name) {
+        if (iscntrl(static_cast<unsigned char>(c))) {
+            errorMsg = "姓名不能包含控制字符！";
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// 验证班级：非空、长度限制(1-20字符)
+bool Menu::validateClassName(const string& className, string& errorMsg) const {
+    if (className.empty()) {
+        errorMsg = "班级不能为空！";
+        return false;
+    }
+    
+    if (className.length() > 20) {
+        errorMsg = "班级名称长度不能超过20个字符！";
+        return false;
+    }
+    
+    // 检查是否有明显的非法字符
+    for (char c : className) {
+        if (iscntrl(static_cast<unsigned char>(c))) {
+            errorMsg = "班级名称不能包含控制字符！";
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+// 验证分数范围（0-100）
+bool Menu::validateScoreRange(double score, string& errorMsg) const {
+    if (score < 0 || score > 100) {
+        errorMsg = "分数必须在0-100之间！";
+        return false;
+    }
+    return true;
 }
 
 // 显示主菜单
@@ -269,23 +349,51 @@ void Menu::handleQueryMenuChoice(int choice) {
 // 添加学生界面
 void Menu::addStudentUI() {
     string id, name, className;
+    string errorMsg;
     
-    cout << "请输入学号：";
-    getline(cin, id);
+    // 输入并验证学号
+    while (true) {
+        cout << "请输入学号：";
+        getline(cin, id);
+        
+        if (validateStudentId(id, errorMsg)) {
+            break;
+        }
+        cout << "❌ 输入错误：" << errorMsg << endl;
+        cout << "请重新输入。" << endl;
+    }
     
-    cout << "请输入姓名：";
-    getline(cin, name);
+    // 输入并验证姓名
+    while (true) {
+        cout << "请输入姓名：";
+        getline(cin, name);
+        
+        if (validateStudentName(name, errorMsg)) {
+            break;
+        }
+        cout << "❌ 输入错误：" << errorMsg << endl;
+        cout << "请重新输入。" << endl;
+    }
     
-    cout << "请输入班级：";
-    getline(cin, className);
+    // 输入并验证班级
+    while (true) {
+        cout << "请输入班级：";
+        getline(cin, className);
+        
+        if (validateClassName(className, errorMsg)) {
+            break;
+        }
+        cout << "❌ 输入错误：" << errorMsg << endl;
+        cout << "请重新输入。" << endl;
+    }
     
     Student student(id, name, className);
     
     if (manager->addStudent(student)) {
-        cout << "学生添加成功！" << endl;
+        cout << "✅ 学生添加成功！" << endl;
         saveData();
     } else {
-        cout << "学生添加失败，学号可能已存在。" << endl;
+        cout << "❌ 学生添加失败，学号可能已存在。" << endl;
     }
 }
 
@@ -308,7 +416,7 @@ void Menu::deleteStudentUI() {
     char confirm;
     cout << "确认删除？(y/n): ";
     cin >> confirm;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     if (confirm == 'y' || confirm == 'Y') {
         if (manager->removeStudent(id)) {
@@ -510,7 +618,7 @@ void Menu::subjectSettingsUI() {
                 char confirm;
                 cout << "确认删除？(y/n): ";
                 cin >> confirm;
-                cin.ignore();
+                cin.ignore(numeric_limits<streamsize>::max(), '\n');
                 
                 if (confirm == 'y' || confirm == 'Y') {
                     if (manager->removeSubject(subject)) {
@@ -774,7 +882,7 @@ void Menu::sortByTotalUI() {
     cout << "2. 升序（从低到高）" << endl;
     cout << "请选择：";
     cin >> orderChoice;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     SortType sortType;
     if (orderChoice == 2) {
@@ -817,7 +925,7 @@ void Menu::sortBySubjectUI() {
     int choice;
     cout << "请选择：";
     cin >> choice;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     if (choice < 1 || choice > (int)subjects.size()) {
         cout << "无效的选择。" << endl;
@@ -887,7 +995,7 @@ void Menu::queryByScoreRangeUI() {
     
     if (choice < 1 || choice > (int)subjects.size()) {
         cout << "无效的选择。" << endl;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         return;
     }
     
@@ -898,7 +1006,7 @@ void Menu::queryByScoreRangeUI() {
     cin >> minScore;
     cout << "请输入最高分：";
     cin >> maxScore;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     if (minScore > maxScore) {
         cout << "最低分不能大于最高分。" << endl;
@@ -980,7 +1088,7 @@ void Menu::queryByMinScoreUI() {
     
     if (choice < 1 || choice > (int)subjects.size()) {
         cout << "无效的选择。" << endl;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         return;
     }
     
@@ -989,7 +1097,7 @@ void Menu::queryByMinScoreUI() {
     double minScore;
     cout << "请输入最低分数：";
     cin >> minScore;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     vector<Student> result = manager->queryStudents(QUERY_BY_MIN_SCORE, selectedSubject, minScore);
     
@@ -1088,7 +1196,7 @@ void Menu::classStatisticsUI() {
     int choice;
     cout << "请选择要统计的班级：";
     cin >> choice;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     if (choice < 1 || choice > (int)classes.size()) {
         cout << "无效的选择。" << endl;
@@ -1174,7 +1282,7 @@ void Menu::scoreRangeStatisticsUI() {
     
     int choice;
     cin >> choice;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     string selectedSubject;
     
@@ -1192,7 +1300,7 @@ void Menu::scoreRangeStatisticsUI() {
         int subjChoice;
         cout << "请选择：";
         cin >> subjChoice;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         
         if (subjChoice < 1 || subjChoice > (int)subjects.size()) {
             cout << "无效的选择。" << endl;
@@ -1299,7 +1407,7 @@ void Menu::selectExportFormat(int& format) {
     cout << "5. XML格式 (.xml) - 结构化数据" << endl;
     cout << "请选择：";
     cin >> format;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 // 选择导入格式
@@ -1310,7 +1418,7 @@ void Menu::selectImportFormat(int& format) {
     cout << "2. CSV格式 (.csv) - 从Excel等软件导入" << endl;
     cout << "请选择：";
     cin >> format;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
 }
 
 // 导出数据界面
@@ -1373,7 +1481,7 @@ void Menu::importDataUI() {
     char confirm;
     cout << "确定要继续导入吗？(y/n): ";
     cin >> confirm;
-    cin.ignore();
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     
     if (confirm != 'y' && confirm != 'Y') {
         cout << "已取消导入。" << endl;

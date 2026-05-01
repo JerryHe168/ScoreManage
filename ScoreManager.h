@@ -83,6 +83,35 @@ private:
     mutable vector<string> classesCache;
     mutable bool classesCacheValid;  // 班级列表缓存是否有效
     
+    // ============================ 排序结果缓存 ============================
+    // 设计原则：缓存最近使用的排序结果
+    // 问题：sortStudents每次都拷贝整个数组，然后排序
+    // 解决方案：缓存最近一次的排序结果，如果排序方式相同则直接返回
+    
+    // 排序缓存键：排序类型 + 科目名（仅单科排序需要）
+    struct SortCacheKey {
+        SortType sortType;
+        string subject;
+        
+        // 用于unordered_map的比较
+        bool operator==(const SortCacheKey& other) const {
+            return sortType == other.sortType && subject == other.subject;
+        }
+    };
+    
+    // 排序缓存键的哈希函数
+    struct SortCacheKeyHash {
+        size_t operator()(const SortCacheKey& key) const {
+            size_t h1 = hash<int>()(key.sortType);
+            size_t h2 = hash<string>()(key.subject);
+            return h1 ^ (h2 << 1);
+        }
+    };
+    
+    // 排序结果缓存
+    mutable unordered_map<SortCacheKey, vector<Student>, SortCacheKeyHash> sortCache;
+    mutable bool sortCacheValid;  // 排序缓存是否有效
+    
     // 私有辅助函数
     void buildStudentIdIndex() const;  // 构建学生ID索引
     void invalidateCache() const;       // 使所有缓存失效（const方法可以调用，因为mutable）
