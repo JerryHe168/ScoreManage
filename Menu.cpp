@@ -1204,7 +1204,7 @@ void Menu::classStatisticsUI() {
     }
     
     string className = classes[choice - 1];
-    ScoreManager::ClassStatistics stats = manager->getClassStatistics(className);
+    ClassStatistics stats = manager->getClassStatistics(className);
     
     cout << endl;
     cout << "═══════════════════════════════════════════════════════════" << endl;
@@ -1310,7 +1310,7 @@ void Menu::scoreRangeStatisticsUI() {
         selectedSubject = subjects[subjChoice - 1];
     }
     
-    vector<ScoreManager::ScoreRangeStats> stats = manager->getScoreRangeStats(selectedSubject);
+    vector<ScoreRangeStats> stats = manager->getScoreRangeStats(selectedSubject);
     
     cout << endl;
     cout << "═══════════════════════════════════════════════════════════" << endl;
