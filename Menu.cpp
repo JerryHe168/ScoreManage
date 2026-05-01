@@ -650,6 +650,93 @@ void Menu::validateScoreUI() {
     cout << "验证完成：有效 " << validCount << " 人，无效 " << invalidCount << " 人" << endl;
 }
 
+// ============================ 公共显示函数实现 ============================
+// 设计原则：消除重复代码，统一显示逻辑
+// 显示学生列表表格（带排名）
+void Menu::displayStudentList(const vector<Student>& students, const string& title, 
+                                 bool showRank, bool showGrade) {
+    if (students.empty()) {
+        cout << "暂无学生信息。" << endl;
+        return;
+    }
+    
+    cout << title << endl;
+    
+    // 根据是否显示等级，选择不同的表格格式
+    if (showGrade) {
+        cout << "+------+------------+--------+---------+---------+-------+------+" << endl;
+        cout << "| 排名 |   学号     |  姓名  |  班级   |  总分   | 平均分 | 等级 |" << endl;
+        cout << "+------+------------+--------+---------+---------+-------+------+" << endl;
+        
+        for (size_t i = 0; i < students.size(); i++) {
+            if (showRank) {
+                cout << "| " << setw(4) << (i + 1) << " |";
+            } else {
+                cout << "| ";  // 不显示排名时留空
+            }
+            cout << " " << setw(10) << students[i].getStudentId() << " |";
+            cout << " " << setw(6) << students[i].getName() << " |";
+            cout << " " << setw(7) << students[i].getClassName() << " |";
+            cout << " " << fixed << setprecision(1) << setw(7) << students[i].getTotalScore() << " |";
+            cout << " " << fixed << setprecision(1) << setw(5) << students[i].getAverageScore() << " |";
+            cout << "  " << students[i].getGrade() << "  |" << endl;
+        }
+        
+        cout << "+------+------------+--------+---------+---------+-------+------+" << endl;
+    } else {
+        // 不显示等级的格式
+        cout << "+------+------------+--------+---------+---------+-------+" << endl;
+        cout << "| 排名 |   学号     |  姓名  |  班级   |  总分   | 平均分 |" << endl;
+        cout << "+------+------------+--------+---------+---------+-------+" << endl;
+        
+        for (size_t i = 0; i < students.size(); i++) {
+            if (showRank) {
+                cout << "| " << setw(4) << (i + 1) << " |";
+            } else {
+                cout << "| ";  // 不显示排名时留空
+            }
+            cout << " " << setw(10) << students[i].getStudentId() << " |";
+            cout << " " << setw(6) << students[i].getName() << " |";
+            cout << " " << setw(7) << students[i].getClassName() << " |";
+            cout << " " << fixed << setprecision(1) << setw(7) << students[i].getTotalScore() << " |";
+            cout << " " << fixed << setprecision(1) << setw(5) << students[i].getAverageScore() << " |" << endl;
+        }
+        
+        cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    }
+}
+
+// 显示学生列表表格（按单科排序）
+void Menu::displayStudentListBySubject(const vector<Student>& students, const string& subject, 
+                                           const string& title) {
+    if (students.empty()) {
+        cout << "暂无学生信息。" << endl;
+        return;
+    }
+    
+    cout << title << endl;
+    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    cout << "| 排名 |   学号     |  姓名  |  班级   | " << setw(6) << subject << " | 平均分 |" << endl;
+    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    
+    for (size_t i = 0; i < students.size(); i++) {
+        cout << "| " << setw(4) << (i + 1) << " |";
+        cout << " " << setw(10) << students[i].getStudentId() << " |";
+        cout << " " << setw(6) << students[i].getName() << " |";
+        cout << " " << setw(7) << students[i].getClassName() << " |";
+        
+        if (students[i].hasScore(subject)) {
+            cout << " " << fixed << setprecision(1) << setw(7) << students[i].getScore(subject) << " |";
+        } else {
+            cout << "  --.-- |";
+        }
+        
+        cout << " " << fixed << setprecision(1) << setw(5) << students[i].getAverageScore() << " |" << endl;
+    }
+    
+    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+}
+
 // 按总分排序界面
 void Menu::sortByTotalUI() {
     int orderChoice;
@@ -668,81 +755,20 @@ void Menu::sortByTotalUI() {
     }
     
     vector<Student> sortedStudents = manager->sortStudents(sortType);
-    
-    if (sortedStudents.empty()) {
-        cout << "暂无学生信息。" << endl;
-        return;
-    }
-    
-    cout << "按总分排序结果：" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
-    cout << "| 排名 |   学号     |  姓名  |  班级   |  总分   | 平均分 |" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
-    
-    for (size_t i = 0; i < sortedStudents.size(); i++) {
-        cout << "| " << setw(4) << (i + 1) << " |";
-        cout << " " << setw(10) << sortedStudents[i].getStudentId() << " |";
-        cout << " " << setw(6) << sortedStudents[i].getName() << " |";
-        cout << " " << setw(7) << sortedStudents[i].getClassName() << " |";
-        cout << " " << fixed << setprecision(1) << setw(7) << sortedStudents[i].getTotalScore() << " |";
-        cout << " " << fixed << setprecision(1) << setw(5) << sortedStudents[i].getAverageScore() << " |" << endl;
-    }
-    
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    displayStudentList(sortedStudents, "按总分排序结果：", true, false);
 }
 
 // 按总分排序（直接指定排序方式，不再让用户选择）
 void Menu::sortByTotalDirect(SortType sortType) {
     vector<Student> sortedStudents = manager->sortStudents(sortType);
-    
-    if (sortedStudents.empty()) {
-        cout << "暂无学生信息。" << endl;
-        return;
-    }
-    
     string orderText = (sortType == SORT_BY_TOTAL_DESC) ? "降序" : "升序";
-    cout << "按总分" << orderText << "排序结果：" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
-    cout << "| 排名 |   学号     |  姓名  |  班级   |  总分   | 平均分 |" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
-    
-    for (size_t i = 0; i < sortedStudents.size(); i++) {
-        cout << "| " << setw(4) << (i + 1) << " |";
-        cout << " " << setw(10) << sortedStudents[i].getStudentId() << " |";
-        cout << " " << setw(6) << sortedStudents[i].getName() << " |";
-        cout << " " << setw(7) << sortedStudents[i].getClassName() << " |";
-        cout << " " << fixed << setprecision(1) << setw(7) << sortedStudents[i].getTotalScore() << " |";
-        cout << " " << fixed << setprecision(1) << setw(5) << sortedStudents[i].getAverageScore() << " |" << endl;
-    }
-    
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    displayStudentList(sortedStudents, "按总分" + orderText + "排序结果：", true, false);
 }
 
 // 按平均分排序界面
 void Menu::sortByAverageUI() {
     vector<Student> sortedStudents = manager->sortStudents(SORT_BY_AVERAGE);
-    
-    if (sortedStudents.empty()) {
-        cout << "暂无学生信息。" << endl;
-        return;
-    }
-    
-    cout << "按平均分排序结果：" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+------+" << endl;
-    cout << "| 排名 |   学号     |  姓名  |  班级   |  总分   | 平均分 | 等级 |" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+------+" << endl;
-    
-    for (size_t i = 0; i < sortedStudents.size(); i++) {
-        cout << "| " << setw(4) << (i + 1) << " |";
-        cout << " " << setw(10) << sortedStudents[i].getStudentId() << " |";
-        cout << " " << setw(6) << sortedStudents[i].getName() << " |";
-        cout << " " << setw(7) << sortedStudents[i].getClassName() << " |";
-        cout << " " << fixed << setprecision(1) << setw(7) << sortedStudents[i].getTotalScore() << " |";
-        cout << " " << fixed << setprecision(1) << setw(5) << sortedStudents[i].getAverageScore() << " |";
-        cout << "  " << sortedStudents[i].getGrade() << "  |" << endl;
-    }
-    
-    cout << "+------+------------+--------+---------+---------+-------+------+" << endl;
+    displayStudentList(sortedStudents, "按平均分排序结果：", true, true);
 }
 
 // 按单科成绩排序界面
@@ -771,33 +797,7 @@ void Menu::sortBySubjectUI() {
     
     string selectedSubject = subjects[choice - 1];
     vector<Student> sortedStudents = manager->sortStudents(SORT_BY_SUBJECT, selectedSubject);
-    
-    if (sortedStudents.empty()) {
-        cout << "暂无学生信息。" << endl;
-        return;
-    }
-    
-    cout << "按 " << selectedSubject << " 成绩排序结果：" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
-    cout << "| 排名 |   学号     |  姓名  |  班级   | " << setw(6) << selectedSubject << " | 平均分 |" << endl;
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
-    
-    for (size_t i = 0; i < sortedStudents.size(); i++) {
-        cout << "| " << setw(4) << (i + 1) << " |";
-        cout << " " << setw(10) << sortedStudents[i].getStudentId() << " |";
-        cout << " " << setw(6) << sortedStudents[i].getName() << " |";
-        cout << " " << setw(7) << sortedStudents[i].getClassName() << " |";
-        
-        if (sortedStudents[i].hasScore(selectedSubject)) {
-            cout << " " << fixed << setprecision(1) << setw(7) << sortedStudents[i].getScore(selectedSubject) << " |";
-        } else {
-            cout << "  --.-- |";
-        }
-        
-        cout << " " << fixed << setprecision(1) << setw(5) << sortedStudents[i].getAverageScore() << " |" << endl;
-    }
-    
-    cout << "+------+------------+--------+---------+---------+-------+" << endl;
+    displayStudentListBySubject(sortedStudents, selectedSubject, "按 " + selectedSubject + " 成绩排序结果：");
 }
 
 // 按学号排序界面

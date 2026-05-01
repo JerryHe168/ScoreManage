@@ -20,10 +20,10 @@ public:
     Student();
     Student(const string& id, const string& n, const string& c);
 
-    // 获取基本信息
-    string getStudentId() const;
-    string getName() const;
-    string getClassName() const;
+    // 获取基本信息（返回const引用，避免字符串拷贝）
+    const string& getStudentId() const;
+    const string& getName() const;
+    const string& getClassName() const;
 
     // 设置基本信息
     void setStudentId(const string& id);
