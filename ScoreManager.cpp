@@ -515,7 +515,7 @@ vector<string> ScoreManager::getAllClasses() const {
 
 // 获取班级统计报告（带缓存）
 // 设计模式：Lazy Cache - 首次计算，后续直接用缓存
-ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& className) const {
+ClassStatistics ScoreManager::getClassStatistics(const string& className) const {
     // ============================ 缓存检查 ============================
     // 如果缓存有效且存在，直接返回缓存结果
     if (cacheValid) {
@@ -624,7 +624,7 @@ ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& cla
 
 // 获取分数段统计
 // 设计原则：使用可配置的分数段，消除硬编码
-vector<ScoreManager::ScoreRangeStats> ScoreManager::getScoreRangeStats(const string& subject) const {
+vector<ScoreRangeStats> ScoreManager::getScoreRangeStats(const string& subject) const {
     // 使用可配置的分数段（与等级评定对应）
     const vector<ScoreRangeDef>& ranges = DEFAULT_SCORE_RANGES;
     

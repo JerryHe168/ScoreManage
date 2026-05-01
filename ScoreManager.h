@@ -6,6 +6,7 @@
 #include <string>
 #include <map>
 #include <unordered_map>
+#include <functional>
 
 using namespace std;
 
@@ -61,6 +62,62 @@ enum QueryType {
     QUERY_BY_MIN_SCORE       // 按成绩范围查询（≥某分数）
 };
 
+// ============================ 统计数据结构（类外部声明，解决声明顺序问题） ============================
+// 设计原则：只存储学生ID（主键），姓名通过ID实时查询
+// 优点：无数据冗余、保证数据一致性、节省内存
+
+struct SubjectStats {
+    string subject;
+    double average;
+    double maxScore;
+    string maxStudentId;      // 只存ID，显示时通过ID查姓名
+    double minScore;
+    string minStudentId;      // 只存ID，显示时通过ID查姓名
+    int passCount;
+    int excellentCount;
+    double passRate;
+    double excellentRate;
+};
+
+struct ClassStatistics {
+    string className;
+    int totalStudents;
+    vector<SubjectStats> subjectStats;
+    double totalMaxScore;
+    string totalMaxStudentId;   // 只存ID
+    double totalMinScore;
+    string totalMinStudentId;   // 只存ID
+    double overallAverage;
+};
+
+// 分数段统计结构
+struct ScoreRangeStats {
+    string range;
+    int count;
+    double percentage;
+};
+
+// ============================ 排序缓存键（类外部声明，解决Visual Studio编译问题） ============================
+// 排序缓存键：排序类型 + 科目名（仅单科排序需要）
+struct SortCacheKey {
+    SortType sortType;
+    string subject;
+    
+    // 用于unordered_map的比较
+    bool operator==(const SortCacheKey& other) const {
+        return sortType == other.sortType && subject == other.subject;
+    }
+};
+
+// 排序缓存键的哈希函数（类外部，解决Visual Studio编译问题）
+struct SortCacheKeyHash {
+    size_t operator()(const SortCacheKey& key) const {
+        size_t h1 = hash<int>()(static_cast<int>(key.sortType));
+        size_t h2 = hash<string>()(key.subject);
+        return h1 ^ (h2 << 1);
+    }
+};
+
 class ScoreManager {
 private:
     vector<Student> students;
@@ -87,26 +144,6 @@ private:
     // 设计原则：缓存最近使用的排序结果
     // 问题：sortStudents每次都拷贝整个数组，然后排序
     // 解决方案：缓存最近一次的排序结果，如果排序方式相同则直接返回
-    
-    // 排序缓存键：排序类型 + 科目名（仅单科排序需要）
-    struct SortCacheKey {
-        SortType sortType;
-        string subject;
-        
-        // 用于unordered_map的比较
-        bool operator==(const SortCacheKey& other) const {
-            return sortType == other.sortType && subject == other.subject;
-        }
-    };
-    
-    // 排序缓存键的哈希函数
-    struct SortCacheKeyHash {
-        size_t operator()(const SortCacheKey& key) const {
-            size_t h1 = hash<int>()(key.sortType);
-            size_t h2 = hash<string>()(key.subject);
-            return h1 ^ (h2 << 1);
-        }
-    };
     
     // 排序结果缓存
     mutable unordered_map<SortCacheKey, vector<Student>, SortCacheKeyHash> sortCache;
@@ -159,40 +196,6 @@ public:
     double getSubjectAverage(const string& subject) const;
     int getPassCount(const string& subject) const;
     int getExcellentCount(const string& subject) const;
-    
-    // 班级统计报告结构
-    // 设计原则：只存储学生ID（主键），姓名通过ID实时查询
-    // 优点：无数据冗余、保证数据一致性、节省内存
-    struct SubjectStats {
-        string subject;
-        double average;
-        double maxScore;
-        string maxStudentId;      // 只存ID，显示时通过ID查姓名
-        double minScore;
-        string minStudentId;      // 只存ID，显示时通过ID查姓名
-        int passCount;
-        int excellentCount;
-        double passRate;
-        double excellentRate;
-    };
-    
-    struct ClassStatistics {
-        string className;
-        int totalStudents;
-        vector<SubjectStats> subjectStats;
-        double totalMaxScore;
-        string totalMaxStudentId;   // 只存ID
-        double totalMinScore;
-        string totalMinStudentId;   // 只存ID
-        double overallAverage;
-    };
-    
-    // 分数段统计结构
-    struct ScoreRangeStats {
-        string range;
-        int count;
-        double percentage;
-    };
     
     // 班级统计（带缓存）
     ClassStatistics getClassStatistics(const string& className) const;
