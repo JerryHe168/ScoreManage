@@ -14,9 +14,11 @@ using namespace std;
 void ScoreManager::invalidateCache() const {
     cacheValid = false;
     classesCacheValid = false;  // 班级列表缓存也失效
+    sortCacheValid = false;     // 排序缓存也失效
     classStatsCache.clear();
     studentIdIndex.clear();
     classesCache.clear();  // 清空班级列表缓存
+    sortCache.clear();     // 清空排序缓存
 }
 
 // 构建学生ID索引 - O(n)一次构建，后续O(1)查找
@@ -34,7 +36,7 @@ void ScoreManager::buildStudentIdIndex() const {
 
 // 构造函数
 ScoreManager::ScoreManager() 
-    : cacheValid(false), classesCacheValid(false) {
+    : cacheValid(false), classesCacheValid(false), sortCacheValid(false) {
     initDefaultSubjects();
 }
 
@@ -175,9 +177,27 @@ bool ScoreManager::validateScore(double score) const {
     return score >= MIN_SCORE && score <= MAX_SCORE;
 }
 
-// 排序学生
+// 排序学生（带缓存机制）
+// 设计模式：Lazy Cache - 首次计算，后续直接用缓存
+// 优化点：
+// 1. 缓存排序结果，相同排序方式直接返回缓存
+// 2. 使用移动语义返回，避免额外拷贝
+// 3. 数据变更时缓存自动失效
 vector<Student> ScoreManager::sortStudents(SortType sortType, const string& subject) const {
-    vector<Student> sortedStudents = students;
+    // ============================ 缓存检查 ============================
+    SortCacheKey key{sortType, subject};
+    
+    if (sortCacheValid) {
+        auto it = sortCache.find(key);
+        if (it != sortCache.end()) {
+            // 缓存命中，返回副本（因为调用方可能需要修改结果）
+            // 注意：如果调用方只读，可以考虑返回const引用
+            return it->second;
+        }
+    }
+    
+    // ============================ 缓存未命中，重新计算 ============================
+    vector<Student> sortedStudents = students;  // 必须拷贝，因为sort会修改原数组
     
     switch (sortType) {
         case SORT_BY_TOTAL_DESC:
@@ -220,7 +240,12 @@ vector<Student> ScoreManager::sortStudents(SortType sortType, const string& subj
             break;
     }
     
-    return sortedStudents;
+    // ============================ 存入缓存 ============================
+    sortCache[key] = sortedStudents;
+    sortCacheValid = true;
+    
+    // 使用移动语义返回，避免额外拷贝
+    return move(sortedStudents);
 }
 
 // 查询学生

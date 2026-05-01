@@ -89,6 +89,19 @@ public:
     // 显示学生列表表格（按单科排序）
     void displayStudentListBySubject(const vector<Student>& students, const string& subject, 
                                        const string& title);
+    
+    // ============================ 输入验证函数 ============================
+    // 验证学号：非空、长度限制、格式验证
+    bool validateStudentId(const string& id, string& errorMsg) const;
+    
+    // 验证姓名：非空、长度限制、格式验证（不允许特殊字符）
+    bool validateStudentName(const string& name, string& errorMsg) const;
+    
+    // 验证班级：非空、长度限制
+    bool validateClassName(const string& className, string& errorMsg) const;
+    
+    // 验证分数范围（0-100）
+    bool validateScoreRange(double score, string& errorMsg) const;
 
     // 数据持久化
     void loadData();
