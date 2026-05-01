@@ -7,8 +7,31 @@
 
 using namespace std;
 
+// ============================ 缓存机制实现 ============================
+
+// 使缓存失效 - 当学生数据变更时调用
+void ScoreManager::invalidateCache() const {
+    cacheValid = false;
+    classStatsCache.clear();
+    studentIdIndex.clear();
+}
+
+// 构建学生ID索引 - O(n)一次构建，后续O(1)查找
+void ScoreManager::buildStudentIdIndex() const {
+    if (cacheValid && !studentIdIndex.empty()) {
+        return;  // 索引已有效
+    }
+    
+    studentIdIndex.clear();
+    for (size_t i = 0; i < students.size(); ++i) {
+        studentIdIndex[students[i].getStudentId()] = i;
+    }
+    cacheValid = true;
+}
+
 // 构造函数
-ScoreManager::ScoreManager() {
+ScoreManager::ScoreManager() 
+    : cacheValid(false) {
     initDefaultSubjects();
 }
 
@@ -23,6 +46,7 @@ bool ScoreManager::addSubject(const string& subject) {
         return false;  // 科目已存在
     }
     subjects.push_back(subject);
+    invalidateCache();  // 数据变更，使缓存失效
     return true;
 }
 
@@ -35,6 +59,7 @@ bool ScoreManager::removeSubject(const string& subject) {
         for (auto& student : students) {
             student.removeScore(subject);
         }
+        invalidateCache();  // 数据变更，使缓存失效
         return true;
     }
     return false;
@@ -52,13 +77,15 @@ bool ScoreManager::hasSubject(const string& subject) const {
 
 // 添加学生
 bool ScoreManager::addStudent(const Student& student) {
-    // 检查学号是否已存在
-    for (const auto& s : students) {
-        if (s.getStudentId() == student.getStudentId()) {
-            return false;  // 学号已存在
-        }
+    // 使用索引检查学号是否已存在（先构建索引）
+    buildStudentIdIndex();
+    
+    if (studentIdIndex.find(student.getStudentId()) != studentIdIndex.end()) {
+        return false;  // 学号已存在
     }
+    
     students.push_back(student);
+    invalidateCache();  // 数据变更，使缓存失效
     return true;
 }
 
@@ -67,6 +94,7 @@ bool ScoreManager::removeStudent(const string& studentId) {
     for (auto it = students.begin(); it != students.end(); ++it) {
         if (it->getStudentId() == studentId) {
             students.erase(it);
+            invalidateCache();  // 数据变更，使缓存失效
             return true;
         }
     }
@@ -75,21 +103,38 @@ bool ScoreManager::removeStudent(const string& studentId) {
 
 // 更新学生信息
 bool ScoreManager::updateStudent(const Student& student) {
-    for (auto& s : students) {
-        if (s.getStudentId() == student.getStudentId()) {
-            s = student;
-            return true;
-        }
+    // 使用索引快速查找
+    buildStudentIdIndex();
+    
+    auto it = studentIdIndex.find(student.getStudentId());
+    if (it != studentIdIndex.end()) {
+        students[it->second] = student;
+        invalidateCache();  // 数据变更，使缓存失效
+        return true;
     }
     return false;
 }
 
-// 根据学号查找学生
+// 根据学号查找学生（非const版本）
 Student* ScoreManager::findStudentById(const string& studentId) {
-    for (auto& student : students) {
-        if (student.getStudentId() == studentId) {
-            return &student;
-        }
+    // 使用索引O(1)查找
+    buildStudentIdIndex();
+    
+    auto it = studentIdIndex.find(studentId);
+    if (it != studentIdIndex.end()) {
+        return &students[it->second];
+    }
+    return nullptr;
+}
+
+// 根据学号查找学生（const版本）
+const Student* ScoreManager::findStudentById(const string& studentId) const {
+    // 使用索引O(1)查找
+    buildStudentIdIndex();
+    
+    auto it = studentIdIndex.find(studentId);
+    if (it != studentIdIndex.end()) {
+        return &students[it->second];
     }
     return nullptr;
 }
@@ -115,12 +160,16 @@ bool ScoreManager::setStudentScore(const string& studentId, const string& subjec
         return false;  // 学生不存在
     }
     
-    return student->setScore(subject, score);
+    bool result = student->setScore(subject, score);
+    if (result) {
+        invalidateCache();  // 数据变更，使缓存失效
+    }
+    return result;
 }
 
-// 验证分数
+// 验证分数 - 使用常量
 bool ScoreManager::validateScore(double score) const {
-    return score >= 0 && score <= 100;
+    return score >= MIN_SCORE && score <= MAX_SCORE;
 }
 
 // 排序学生
@@ -344,6 +393,8 @@ bool ScoreManager::loadFromFile(const string& filename) {
     students.swap(tempStudents);
     subjects.swap(tempSubjects);
     
+    invalidateCache();  // 数据变更，使缓存失效
+    
     return true;
 }
 
@@ -382,7 +433,7 @@ int ScoreManager::getPassCount(const string& subject) const {
     int count = 0;
     
     for (const auto& student : students) {
-        if (student.hasScore(subject) && student.getScore(subject) >= 60) {
+        if (student.hasScore(subject) && student.getScore(subject) >= PASS_SCORE) {
             count++;
         }
     }
@@ -390,12 +441,12 @@ int ScoreManager::getPassCount(const string& subject) const {
     return count;
 }
 
-// 获取优秀人数
+// 获取优秀人数（与等级评定一致：A=90+）
 int ScoreManager::getExcellentCount(const string& subject) const {
     int count = 0;
     
     for (const auto& student : students) {
-        if (student.hasScore(subject) && student.getScore(subject) >= 90) {
+        if (student.hasScore(subject) && student.getScore(subject) >= EXCELLENT_SCORE) {
             count++;
         }
     }
@@ -421,13 +472,24 @@ vector<string> ScoreManager::getAllClasses() const {
     return classes;
 }
 
-// 获取班级统计报告
+// 获取班级统计报告（带缓存）
+// 设计模式：Lazy Cache - 首次计算，后续直接用缓存
 ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& className) const {
+    // ============================ 缓存检查 ============================
+    // 如果缓存有效且存在，直接返回缓存结果
+    if (cacheValid) {
+        auto it = classStatsCache.find(className);
+        if (it != classStatsCache.end()) {
+            return it->second;  // 缓存命中，O(1)返回
+        }
+    }
+    
+    // ============================ 缓存未命中，重新计算 ============================
     ClassStatistics stats;
     stats.className = className;
     stats.totalStudents = 0;
-    stats.totalMaxScore = -1;
-    stats.totalMinScore = 101;
+    stats.totalMaxScore = MIN_SCORE - 1;  // 使用常量，比最低分还低
+    stats.totalMinScore = MAX_SCORE + 1;  // 使用常量，比最高分还高
     stats.overallAverage = 0.0;
     
     double totalScoreSum = 0.0;
@@ -466,8 +528,8 @@ ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& cla
         SubjectStats subjectStats;
         subjectStats.subject = subject;
         subjectStats.average = 0.0;
-        subjectStats.maxScore = -1;
-        subjectStats.minScore = 101;
+        subjectStats.maxScore = MIN_SCORE - 1;  // 使用常量
+        subjectStats.minScore = MAX_SCORE + 1;  // 使用常量
         subjectStats.passCount = 0;
         subjectStats.excellentCount = 0;
         
@@ -492,10 +554,13 @@ ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& cla
                 subjectStats.minStudentId = student.getStudentId();
             }
             
-            if (score >= 60) {
+            // 使用常量：PASS_SCORE = 60
+            if (score >= PASS_SCORE) {
                 subjectStats.passCount++;
             }
-            if (score >= 85) {
+            // 使用常量：EXCELLENT_SCORE = 90（与等级评定一致）
+            // 修复：原来用85，现在统一用90
+            if (score >= EXCELLENT_SCORE) {
                 subjectStats.excellentCount++;
             }
         }
@@ -509,44 +574,57 @@ ScoreManager::ClassStatistics ScoreManager::getClassStatistics(const string& cla
         stats.subjectStats.push_back(subjectStats);
     }
     
+    // ============================ 存入缓存 ============================
+    classStatsCache[className] = stats;
+    cacheValid = true;
+    
     return stats;
 }
 
 // 获取分数段统计
+// 设计原则：使用可配置的分数段，消除硬编码
 vector<ScoreManager::ScoreRangeStats> ScoreManager::getScoreRangeStats(const string& subject) const {
+    // 使用可配置的分数段（与等级评定对应）
+    const vector<ScoreRangeDef>& ranges = DEFAULT_SCORE_RANGES;
+    
     vector<ScoreRangeStats> stats;
-    stats = {
-        {"90-100", 0, 0.0},
-        {"80-89", 0, 0.0},
-        {"70-79", 0, 0.0},
-        {"60-69", 0, 0.0},
-        {"0-59", 0, 0.0}
-    };
+    // 动态初始化分数段
+    for (const auto& range : ranges) {
+        ScoreRangeStats s;
+        s.range = range.displayName;
+        s.count = 0;
+        s.percentage = 0.0;
+        stats.push_back(s);
+    }
     
     int totalCount = 0;
     
     for (const auto& student : students) {
+        double score;
+        bool hasValidScore = false;
+        
         if (subject.empty()) {
-            // 按总分统计
+            // 按平均分统计
             if (student.getSubjectCount() > 0) {
-                double avgScore = student.getAverageScore();
-                totalCount++;
-                if (avgScore >= 90) stats[0].count++;
-                else if (avgScore >= 80) stats[1].count++;
-                else if (avgScore >= 70) stats[2].count++;
-                else if (avgScore >= 60) stats[3].count++;
-                else stats[4].count++;
+                score = student.getAverageScore();
+                hasValidScore = true;
             }
         } else {
             // 按单科统计
             if (student.hasScore(subject)) {
-                double score = student.getScore(subject);
-                totalCount++;
-                if (score >= 90) stats[0].count++;
-                else if (score >= 80) stats[1].count++;
-                else if (score >= 70) stats[2].count++;
-                else if (score >= 60) stats[3].count++;
-                else stats[4].count++;
+                score = student.getScore(subject);
+                hasValidScore = true;
+            }
+        }
+        
+        if (hasValidScore) {
+            totalCount++;
+            // 使用可配置的分数段进行判断
+            for (size_t i = 0; i < ranges.size(); ++i) {
+                if (score >= ranges[i].minScore && score <= ranges[i].maxScore) {
+                    stats[i].count++;
+                    break;
+                }
             }
         }
     }
@@ -738,6 +816,8 @@ bool ScoreManager::loadFromBinaryFile(const string& filename) {
     
     students.swap(tempStudents);
     subjects.swap(tempSubjects);
+    
+    invalidateCache();  // 数据变更，使缓存失效
     
     return true;
 }
