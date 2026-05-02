@@ -5,6 +5,7 @@
 #include <iostream>
 #include <iomanip>
 #include <unordered_set>
+#include <cmath>
 
 using namespace std;
 
@@ -156,7 +157,7 @@ int ScoreManager::getStudentCount() const {
 
 // 设置学生成绩
 bool ScoreManager::setStudentScore(const string& studentId, const string& subject, double score) {
-    if (!validateScore(score)) {
+    if (score < MIN_SCORE || score > MAX_SCORE) {
         return false;  // 分数无效
     }
     
@@ -170,11 +171,6 @@ bool ScoreManager::setStudentScore(const string& studentId, const string& subjec
         invalidateCache();  // 数据变更，使缓存失效
     }
     return result;
-}
-
-// 验证分数 - 使用常量
-bool ScoreManager::validateScore(double score) const {
-    return score >= MIN_SCORE && score <= MAX_SCORE;
 }
 
 // 排序学生（带缓存机制）
@@ -306,6 +302,149 @@ int ScoreManager::getClassRank(const Student& student) const {
     }
     
     return rank;
+}
+
+// 获取班级排名（同分处理）
+// 设计原则：同分同名次，例如：
+// 分数: 100, 95, 95, 90
+// 排名: 1,   2,  2,  4
+RankResult ScoreManager::getClassRankWithTie(const Student& student) const {
+    RankResult result;
+    result.rank = 1;
+    result.truePosition = 1;
+    result.isTied = false;
+    result.tiedCount = 0;
+    
+    string className = student.getClassName();
+    double average = student.getAverageScore();
+    
+    // 统计：
+    // - 比当前学生分数高的人数 → 用于计算rank
+    // - 与当前学生同分的人数 → 用于判断是否同分
+    // - 当前学生的真实位置
+    int higherCount = 0;
+    int equalCount = 0;
+    
+    for (const auto& s : students) {
+        if (s.getClassName() == className) {
+            if (s.getAverageScore() > average) {
+                higherCount++;
+            } else if (s.getAverageScore() == average) {
+                equalCount++;
+            }
+        }
+    }
+    
+    result.rank = higherCount + 1;
+    result.truePosition = higherCount + equalCount;
+    result.isTied = equalCount > 1;
+    result.tiedCount = equalCount;
+    
+    return result;
+}
+
+// 获取年级排名（同分处理）
+// 年级排名 = 全校范围内的排名
+RankResult ScoreManager::getGradeRank(const Student& student) const {
+    RankResult result;
+    result.rank = 1;
+    result.truePosition = 1;
+    result.isTied = false;
+    result.tiedCount = 0;
+    
+    double average = student.getAverageScore();
+    
+    int higherCount = 0;
+    int equalCount = 0;
+    
+    for (const auto& s : students) {
+        // 全校范围内排名，不限制班级
+        if (s.getAverageScore() > average) {
+            higherCount++;
+        } else if (s.getAverageScore() == average) {
+            equalCount++;
+        }
+    }
+    
+    result.rank = higherCount + 1;
+    result.truePosition = higherCount + equalCount;
+    result.isTied = equalCount > 1;
+    result.tiedCount = equalCount;
+    
+    return result;
+}
+
+// 计算标准差
+// 标准差 = sqrt( sum((x - mean)^2) / N )
+double ScoreManager::calculateStandardDeviation(const vector<double>& values, double mean) const {
+    if (values.empty()) {
+        return 0.0;
+    }
+    
+    double sum = 0.0;
+    for (double value : values) {
+        double diff = value - mean;
+        sum += diff * diff;
+    }
+    
+    return sqrt(sum / values.size());
+}
+
+// 计算中位数
+// 中位数：排序后中间位置的数值（奇数个取中间，偶数个取中间两个的平均）
+double ScoreManager::calculateMedian(vector<double> values) const {
+    if (values.empty()) {
+        return 0.0;
+    }
+    
+    sort(values.begin(), values.end());
+    
+    size_t size = values.size();
+    if (size % 2 == 1) {
+        // 奇数个，取中间值
+        return values[size / 2];
+    } else {
+        // 偶数个，取中间两个的平均
+        return (values[size / 2 - 1] + values[size / 2]) / 2.0;
+    }
+}
+
+// 获取全校平均分
+double ScoreManager::getSchoolAverage() const {
+    if (students.empty()) {
+        return 0.0;
+    }
+    
+    double sum = 0.0;
+    int count = 0;
+    
+    for (const auto& student : students) {
+        if (student.isComplete()) {
+            sum += student.getAverageScore();
+            count++;
+        }
+    }
+    
+    return count > 0 ? sum / count : 0.0;
+}
+
+// 获取某科目的全校平均分
+double ScoreManager::getSchoolSubjectAverage(const string& subject) const {
+    if (students.empty()) {
+        return 0.0;
+    }
+    
+    double sum = 0.0;
+    int count = 0;
+    
+    for (const auto& student : students) {
+        if (student.hasScore(subject)) {
+            sum += student.getScore(subject);
+            count++;
+        }
+    }
+    
+    return count > 0 ? sum / count : 0.0;
 }
 
 // 保存到文件
@@ -533,8 +672,19 @@ ClassStatistics ScoreManager::getClassStatistics(const string& className) const 
     stats.totalMinScore = MAX_SCORE + 1;  // 使用常量，比最高分还高
     stats.overallAverage = 0.0;
     
+    // 新字段初始化
+    stats.standardDeviation = 0.0;
+    stats.median = 0.0;
+    stats.schoolAverage = 0.0;
+    stats.differenceFromSchool = 0.0;
+    stats.classRankByAverage = 0;
+    stats.classRankByPassRate = 0;
+    stats.classRankByExcellentRate = 0;
+    stats.totalClasses = 0;
+    
     double totalScoreSum = 0.0;
     int validStudentCount = 0;
+    vector<double> classTotalScores;  // 用于计算标准差和中位数
     
     // 统计每个学生
     for (const auto& student : students) {
@@ -547,6 +697,7 @@ ClassStatistics ScoreManager::getClassStatistics(const string& className) const 
         if (student.getSubjectCount() > 0) {
             totalScoreSum += totalScore;
             validStudentCount++;
+            classTotalScores.push_back(totalScore);
             
             if (totalScore > stats.totalMaxScore) {
                 stats.totalMaxScore = totalScore;
@@ -562,6 +713,16 @@ ClassStatistics ScoreManager::getClassStatistics(const string& className) const 
     
     if (validStudentCount > 0) {
         stats.overallAverage = totalScoreSum / validStudentCount;
+        
+        // 计算标准差
+        stats.standardDeviation = calculateStandardDeviation(classTotalScores, stats.overallAverage);
+        
+        // 计算中位数
+        stats.median = calculateMedian(classTotalScores);
+        
+        // 计算与全校平均分的对比
+        stats.schoolAverage = getSchoolAverage();
+        stats.differenceFromSchool = stats.overallAverage - stats.schoolAverage;
     }
     
     // 统计每个科目
@@ -574,8 +735,18 @@ ClassStatistics ScoreManager::getClassStatistics(const string& className) const 
         subjectStats.passCount = 0;
         subjectStats.excellentCount = 0;
         
+        // 新字段初始化
+        subjectStats.standardDeviation = 0.0;
+        subjectStats.median = 0.0;
+        subjectStats.schoolAverage = 0.0;
+        subjectStats.differenceFromSchool = 0.0;
+        subjectStats.passRateRank = 0;
+        subjectStats.excellentRateRank = 0;
+        subjectStats.totalClasses = 0;
+        
         double scoreSum = 0.0;
         int scoreCount = 0;
+        vector<double> subjectScores;  // 用于计算标准差和中位数
         
         for (const auto& student : students) {
             if (student.getClassName() != className) continue;
@@ -584,6 +755,7 @@ ClassStatistics ScoreManager::getClassStatistics(const string& className) const 
             double score = student.getScore(subject);
             scoreSum += score;
             scoreCount++;
+            subjectScores.push_back(score);
             
             if (score > subjectStats.maxScore) {
                 subjectStats.maxScore = score;
@@ -610,9 +782,112 @@ ClassStatistics ScoreManager::getClassStatistics(const string& className) const 
             subjectStats.average = scoreSum / scoreCount;
             subjectStats.passRate = static_cast<double>(subjectStats.passCount) / scoreCount * 100;
             subjectStats.excellentRate = static_cast<double>(subjectStats.excellentCount) / scoreCount * 100;
+            
+            // 计算标准差和中位数
+            subjectStats.standardDeviation = calculateStandardDeviation(subjectScores, subjectStats.average);
+            subjectStats.median = calculateMedian(subjectScores);
+            
+            // 计算与全校平均分的对比
+            subjectStats.schoolAverage = getSchoolSubjectAverage(subject);
+            subjectStats.differenceFromSchool = subjectStats.average - subjectStats.schoolAverage;
         }
         
         stats.subjectStats.push_back(subjectStats);
+    }
+    
+    // ============================ 计算班级排名 ============================
+    vector<string> allClasses = getAllClasses();
+    stats.totalClasses = allClasses.size();
+    
+    // 只有一个班级时，排名都是1
+    if (allClasses.size() == 1) {
+        stats.classRankByAverage = 1;
+        stats.classRankByPassRate = 1;
+        stats.classRankByExcellentRate = 1;
+        for (auto& subj : stats.subjectStats) {
+            subj.passRateRank = 1;
+            subj.excellentRateRank = 1;
+            subj.totalClasses = 1;
+        }
+    } else if (allClasses.size() > 1) {
+        // 计算各班级的统计指标用于排名
+        // 这里使用一个简化的方法：收集所有班级的相同指标，然后计算排名
+        
+        // 1. 按平均分排名
+        vector<pair<double, string>> classAverages;
+        for (const auto& cls : allClasses) {
+            double avg = getClassAverage(cls);
+            classAverages.emplace_back(avg, cls);
+        }
+        sort(classAverages.rbegin(), classAverages.rend());  // 降序排序
+        
+        for (size_t i = 0; i < classAverages.size(); i++) {
+            if (classAverages[i].second == className) {
+                stats.classRankByAverage = i + 1;
+                break;
+            }
+        }
+        
+        // 2. 按科目及格率和优秀率排名
+        for (auto& subj : stats.subjectStats) {
+            // 收集所有班级该科目的及格率
+            vector<pair<double, string>> passRates;
+            vector<pair<double, string>> excellentRates;
+            
+            for (const auto& cls : allClasses) {
+                // 计算该班级该科目的及格率和优秀率
+                int passCount = 0;
+                int excellentCount = 0;
+                int totalCount = 0;
+                
+                for (const auto& student : students) {
+                    if (student.getClassName() != cls) continue;
+                    if (!student.hasScore(subj.subject)) continue;
+                    
+                    totalCount++;
+                    if (student.getScore(subj.subject) >= PASS_SCORE) {
+                        passCount++;
+                    }
+                    if (student.getScore(subj.subject) >= EXCELLENT_SCORE) {
+                        excellentCount++;
+                    }
+                }
+                
+                if (totalCount > 0) {
+                    double passRate = static_cast<double>(passCount) / totalCount * 100;
+                    double excellentRate = static_cast<double>(excellentCount) / totalCount * 100;
+                    passRates.emplace_back(passRate, cls);
+                    excellentRates.emplace_back(excellentRate, cls);
+                }
+            }
+            
+            // 计算及格率排名
+            sort(passRates.rbegin(), passRates.rend());
+            for (size_t i = 0; i < passRates.size(); i++) {
+                if (passRates[i].second == className) {
+                    subj.passRateRank = i + 1;
+                    break;
+                }
+            }
+            
+            // 计算优秀率排名
+            sort(excellentRates.rbegin(), excellentRates.rend());
+            for (size_t i = 0; i < excellentRates.size(); i++) {
+                if (excellentRates[i].second == className) {
+                    subj.excellentRateRank = i + 1;
+                    break;
+                }
+            }
+            
+            subj.totalClasses = allClasses.size();
+        }
+        
+        // 3. 按班级整体及格率和优秀率排名
+        // 简化：使用第一个科目的排名作为班级排名（或者可以计算综合排名）
+        if (!stats.subjectStats.empty()) {
+            stats.classRankByPassRate = stats.subjectStats[0].passRateRank;
+            stats.classRankByExcellentRate = stats.subjectStats[0].excellentRateRank;
+        }
     }
     
     // ============================ 存入缓存 ============================

@@ -82,13 +82,16 @@ public:
     void displayStudentReport(const Student& student);
     
     // ============================ 公共显示函数（消除重复代码） ============================
-    // 显示学生列表表格（带排名）
+    // 显示学生列表表格（汇总格式：排名、学号、姓名、班级、总分、平均分、等级）
     void displayStudentList(const vector<Student>& students, const string& title, 
                              bool showRank = true, bool showGrade = false);
     
     // 显示学生列表表格（按单科排序）
     void displayStudentListBySubject(const vector<Student>& students, const string& subject, 
                                        const string& title);
+    
+    // 显示学生列表表格（详细格式：学号、姓名、班级、各科成绩、平均分、等级）
+    void displayStudentListWithSubjects(const vector<Student>& students, const string& title);
     
     // ============================ 输入验证函数 ============================
     // 验证学号：非空、长度限制、格式验证
