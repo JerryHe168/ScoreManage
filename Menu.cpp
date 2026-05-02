@@ -106,9 +106,9 @@ bool Menu::validateClassName(const string& className, string& errorMsg) const {
     return true;
 }
 
-// 验证分数范围（0-100）
+// 验证分数范围（0-100）- 使用常量
 bool Menu::validateScoreRange(double score, string& errorMsg) const {
-    if (score < 0 || score > 100) {
+    if (score < MIN_SCORE || score > MAX_SCORE) {
         errorMsg = "分数必须在0-100之间！";
         return false;
     }
@@ -469,56 +469,7 @@ void Menu::updateStudentUI() {
 // 查看学生列表界面
 void Menu::viewStudentsUI() {
     vector<Student> students = manager->getAllStudents();
-    
-    if (students.empty()) {
-        cout << "暂无学生信息。" << endl;
-        return;
-    }
-    
-    vector<string> subjects = manager->getSubjects();
-    
-    // 显示表头
-    cout << "+------------+--------+---------+";
-    for (const auto& subject : subjects) {
-        cout << "---------+";
-    }
-    cout << "-------+-------+" << endl;
-    
-    cout << "|   学号     |  姓名  |  班级   |";
-    for (const auto& subject : subjects) {
-        cout << "  " << setw(5) << subject << " |";
-    }
-    cout << " 平均分 |  等级 |" << endl;
-    
-    cout << "+------------+--------+---------+";
-    for (const auto& subject : subjects) {
-        cout << "---------+";
-    }
-    cout << "-------+-------+" << endl;
-    
-    // 显示每个学生
-    for (const auto& student : students) {
-        cout << "| " << setw(10) << student.getStudentId() << " |";
-        cout << " " << setw(6) << student.getName() << " |";
-        cout << " " << setw(7) << student.getClassName() << " |";
-        
-        for (const auto& subject : subjects) {
-            if (student.hasScore(subject)) {
-                cout << " " << fixed << setprecision(1) << setw(6) << student.getScore(subject) << " |";
-            } else {
-                cout << "  --.-- |";
-            }
-        }
-        
-        cout << " " << fixed << setprecision(1) << setw(5) << student.getAverageScore() << " |";
-        cout << "   " << student.getGrade() << "  |" << endl;
-    }
-    
-    cout << "+------------+--------+---------+";
-    for (const auto& subject : subjects) {
-        cout << "---------+";
-    }
-    cout << "-------+-------+" << endl;
+    displayStudentListWithSubjects(students, "学生信息列表：");
 }
 
 // 查询学生界面
@@ -661,7 +612,8 @@ void Menu::inputScoreUI() {
         cout << subject << ": ";
         cin >> score;
         
-        while (!manager->validateScore(score)) {
+        string errorMsg;
+        while (!validateScoreRange(score, errorMsg)) {
             cout << "分数无效，请输入0-100之间的分数：";
             cin >> score;
         }
@@ -706,7 +658,8 @@ void Menu::modifyScoreUI() {
     cout << "请输入新的 " << subject << " 成绩：";
     cin >> newScore;
     
-    while (!manager->validateScore(newScore)) {
+    string errorMsg;
+    while (!validateScoreRange(newScore, errorMsg)) {
         cout << "分数无效，请输入0-100之间的分数：";
         cin >> newScore;
     }
@@ -739,7 +692,8 @@ void Menu::validateScoreUI() {
         map<string, double> scores = student.getAllScores();
         
         for (const auto& pair : scores) {
-            if (!manager->validateScore(pair.second)) {
+            string errorMsg;
+            if (!validateScoreRange(pair.second, errorMsg)) {
                 hasInvalid = true;
                 break;
             }
@@ -872,6 +826,62 @@ void Menu::displayStudentListBySubject(const vector<Student>& students, const st
     }
     
     cout << "+------+------------+--------+---------+---------+-------+" << endl;
+}
+
+// 显示学生列表表格（详细格式：学号、姓名、班级、各科成绩、平均分、等级）
+// 设计原则：提取viewStudentsUI的显示逻辑，作为公共函数复用
+void Menu::displayStudentListWithSubjects(const vector<Student>& students, const string& title) {
+    if (students.empty()) {
+        cout << "暂无学生信息。" << endl;
+        return;
+    }
+    
+    vector<string> subjects = manager->getSubjects();
+    
+    cout << title << endl;
+    
+    // 显示表头
+    cout << "+------------+--------+---------+";
+    for (const auto& subject : subjects) {
+        cout << "---------+";
+    }
+    cout << "-------+-------+" << endl;
+    
+    cout << "|   学号     |  姓名  |  班级   |";
+    for (const auto& subject : subjects) {
+        cout << "  " << setw(5) << subject << " |";
+    }
+    cout << " 平均分 |  等级 |" << endl;
+    
+    cout << "+------------+--------+---------+";
+    for (const auto& subject : subjects) {
+        cout << "---------+";
+    }
+    cout << "-------+-------+" << endl;
+    
+    // 显示每个学生
+    for (const auto& student : students) {
+        cout << "| " << setw(10) << student.getStudentId() << " |";
+        cout << " " << setw(6) << student.getName() << " |";
+        cout << " " << setw(7) << student.getClassName() << " |";
+        
+        for (const auto& subject : subjects) {
+            if (student.hasScore(subject)) {
+                cout << " " << fixed << setprecision(1) << setw(6) << student.getScore(subject) << " |";
+            } else {
+                cout << "  --.-- |";
+            }
+        }
+        
+        cout << " " << fixed << setprecision(1) << setw(5) << student.getAverageScore() << " |";
+        cout << "   " << student.getGrade() << "  |" << endl;
+    }
+    
+    cout << "+------------+--------+---------+";
+    for (const auto& subject : subjects) {
+        cout << "---------+";
+    }
+    cout << "-------+-------+" << endl;
 }
 
 // 按总分排序界面

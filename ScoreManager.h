@@ -66,6 +66,14 @@ enum QueryType {
 // 设计原则：只存储学生ID（主键），姓名通过ID实时查询
 // 优点：无数据冗余、保证数据一致性、节省内存
 
+// 排名结果结构（同分处理）
+struct RankResult {
+    int rank;              // 排名（同分同名次）
+    int truePosition;      // 真实位置（从1开始）
+    bool isTied;           // 是否同分
+    int tiedCount;         // 同分人数
+};
+
 struct SubjectStats {
     string subject;
     double average;
@@ -77,6 +85,15 @@ struct SubjectStats {
     int excellentCount;
     double passRate;
     double excellentRate;
+    
+    double standardDeviation;     // 标准差
+    double median;                // 中位数
+    double schoolAverage;         // 全校平均分
+    double differenceFromSchool;  // 与全校平均分的差值（班级平均分 - 全校平均分）
+    
+    int passRateRank;             // 及格率班级排名
+    int excellentRateRank;        // 优秀率班级排名
+    int totalClasses;             // 总班级数（用于排名显示）
 };
 
 struct ClassStatistics {
@@ -88,6 +105,16 @@ struct ClassStatistics {
     double totalMinScore;
     string totalMinStudentId;   // 只存ID
     double overallAverage;
+    
+    double standardDeviation;     // 总成绩标准差
+    double median;                // 总成绩中位数
+    double schoolAverage;         // 全校平均分
+    double differenceFromSchool;  // 与全校平均分的差值
+    
+    int classRankByAverage;       // 按平均分的班级排名
+    int classRankByPassRate;      // 按及格率的班级排名
+    int classRankByExcellentRate; // 按优秀率的班级排名
+    int totalClasses;             // 总班级数
 };
 
 // 分数段统计结构
@@ -175,7 +202,6 @@ public:
 
     // 成绩管理
     bool setStudentScore(const string& studentId, const string& subject, double score);
-    bool validateScore(double score) const;
 
     // 排序功能
     vector<Student> sortStudents(SortType sortType, const string& subject = "") const;
@@ -184,8 +210,16 @@ public:
     vector<Student> queryStudents(QueryType queryType, const string& param1 = "", 
                                     double param2 = 0, double param3 = 0) const;
 
-    // 排名计算
+    // 排名计算（同分处理）
     int getClassRank(const Student& student) const;
+    RankResult getClassRankWithTie(const Student& student) const;
+    RankResult getGradeRank(const Student& student) const;
+    
+    // 统计辅助函数
+    double calculateStandardDeviation(const vector<double>& values, double mean) const;
+    double calculateMedian(vector<double> values) const;
+    double getSchoolAverage() const;
+    double getSchoolSubjectAverage(const string& subject) const;
 
     // 数据持久化
     bool saveToFile(const string& filename) const;
