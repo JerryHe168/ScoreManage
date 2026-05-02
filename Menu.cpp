@@ -508,7 +508,14 @@ void Menu::displayStudentReport(const Student& student) {
     cout << "───────────────────────────────────────" << endl;
     cout << "总分：" << fixed << setprecision(1) << student.getTotalScore() << endl;
     cout << "平均分：" << fixed << setprecision(1) << student.getAverageScore() << endl;
-    cout << "班级排名：" << manager->getClassRank(student) << endl;
+    
+    RankResult classRank = manager->getClassRankWithTie(student);
+    if (classRank.isTied) {
+        cout << "班级排名：第 " << classRank.rank << " 名（同分：" << classRank.tiedCount << "人）" << endl;
+    } else {
+        cout << "班级排名：第 " << classRank.rank << " 名" << endl;
+    }
+    
     cout << "等级评定：" << student.getGrade() << endl;
     
     // 等级说明

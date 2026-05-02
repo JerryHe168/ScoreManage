@@ -419,7 +419,7 @@ double ScoreManager::getSchoolAverage() const {
     int count = 0;
     
     for (const auto& student : students) {
-        if (student.isComplete()) {
+        if (student.getIsComplete()) {
             sum += student.getAverageScore();
             count++;
         }
